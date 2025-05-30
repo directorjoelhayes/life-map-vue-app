@@ -18,7 +18,7 @@
       height: `${props.height}px`,
     }"
   >
-    <div class="dashboard-item-content">
+    <div class="dashboard-item-content" :class="{ 'lock-content': lockContent }">
       {{ props.selected }}
       <slot name="default">
         {{ title }}
@@ -135,22 +135,30 @@ const initialHeight = ref(0);
 const debugHandle = ref(false);
 const pointerDown = ref(false);
 
+const lockContent = ref(true);
+
 const handlePointerDown = (event) => {
+  event.preventDefault();
   pointerDown.value = true;
   startX.value = event.clientX;
   startY.value = event.clientY;
   initialX.value = props.x;
   initialY.value = props.y;
   event.target.setPointerCapture(event.pointerId);
+  
 };
 
 const handlePointerMove = (event) => {
   if (!pointerDown.value) return;
-  // distance from the startX and startY to the event.clientX and event.clientY
+  event.preventDefault();
   const distance = Math.sqrt(
     (event.clientX - startX.value) ** 2 + (event.clientY - startY.value) ** 2
   );
   if (distance > 10) {
+    //if not selected, select the item
+    if (!isSelected.value) {
+      emit("update:select", event);
+    }
     isDragging.value = true;
   }
   if (!isDragging.value) return;
@@ -173,7 +181,7 @@ const handlePointerUp = (event) => {
     // emit("update:select", props.id);
   } else {
     // handle click
-    emit("update:select", event.shiftKey);
+    emit("update:select", event);
   }
 
   pointerDown.value = false;
@@ -223,14 +231,17 @@ const handleResizePointerUp = (event) => {
   border-radius: 20px;
   cursor: pointer;
   transition: transform 0.3s ease;
-}
-.dashboard-item {
   position: absolute;
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1;
+  user-select: none;
 }
+.dashboard-item {
+  background: var(--surface-500);
+}
+
 .dashboard-item.is-dragging {
   box-shadow: 0px 0px 30px var(--primary-400);
   outline-style: solid;
@@ -328,6 +339,11 @@ const handleResizePointerUp = (event) => {
   width: 100%;
   height: 10px;
   cursor: s-resize;
+}
+
+.lock-content {
+  pointer-events: none;
+  user-select: none;
 }
 </style>
 

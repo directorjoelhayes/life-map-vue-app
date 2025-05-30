@@ -13,6 +13,7 @@
           </div>
           <div class="lm-card-body">
             <p>This is card content.</p>
+            <PopOverTest />
           </div>
         </div>
       </Col>
@@ -23,6 +24,7 @@
           </div>
           <div class="lm-card-body">
             <p>This is card content.</p>
+            <PopOverHover />
           </div>
         </div>
       </Col>
@@ -137,6 +139,8 @@ import LmCard from "../../components/cards/card.vue";
 import LmContainer from "../../components/container/lm-container.vue";
 import Row from "../../components/container/row.vue";
 import Col from "../../components/container/col.vue";
+import PopOverTest from "../../components/popover/pop-over-test.vue";
+import PopOverHover from "../../components/popover/pop-over-hover.vue";
 </script>
 
 

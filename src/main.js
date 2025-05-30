@@ -3,6 +3,7 @@ import './style.css'
 import App from './App.vue'
 
 import { createRouter, createWebHistory } from 'vue-router' 
+import { createPinia } from 'pinia'
 import Home from './pages/home/home.vue'
 import About from './pages/about/about.vue'
 
@@ -14,7 +15,10 @@ const router = createRouter({
   ],
 })
 
+const pinia = createPinia()
+
 // Create app and use router before mounting
 const app = createApp(App)
 app.use(router)
+app.use(pinia)
 app.mount('#app')
