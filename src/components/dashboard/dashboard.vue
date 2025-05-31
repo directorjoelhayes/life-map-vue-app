@@ -5,8 +5,9 @@
         <div>
           <h1>Dashboard</h1>
         </div>
-        
       </Row>
+      <button @click="dbHistory.undo">undo</button>
+      <button @click="dbHistory.redo">redo</button>
     </LmContainer>
     <div
       class="dashboard-container"
@@ -16,10 +17,11 @@
       @pointermove="handleDashboardPointerMove"
       @pointerup="handleDashboardPointerUp"
       @pointercancel="handleDashboardPointerUp"
+      @mousemove="handleMouseMove"
     >
       <DashboardItem
-        v-for="item in items"
-        :key="item.id"
+        v-for="[key, item] in items"
+        :key="key"
         :id="item.id"
         :title="item.title"
         :x="item.x"
@@ -27,6 +29,7 @@
         :width="item.width"
         :height="item.height"
         :selected="selectedItems"
+        :dragGroup="dragGroup"
         @update:position="updateItemPosition(item.id, $event)"
         @update:dragEnd="onDragEnd(item.id, $event)"
         @update:resize="onResize(item.id, $event)"
@@ -52,7 +55,15 @@ import LmContainer from "../container/lm-container.vue";
 import Row from "../container/row.vue";
 import DashboardItem from "./dashboard-item.vue";
 import DashboardSelectBox from "./dashboard-select-box.vue";
-import { onBeforeMount, onMounted } from "vue";
+import composeDataStore from "../../stores/compose-data-store";
+import {
+  onBeforeMount,
+  onMounted,
+  onBeforeUnmount,
+  reactive,
+  computed,
+} from "vue";
+import makeDataStore from "../../stores/make-data-store";
 // import { useDashboardStore } from "../../stores/use-dashboard-store";
 
 // const dashboardStore = useDashboardStore();
@@ -69,33 +80,103 @@ import { ulid } from "ulid";
 
 console.log(ulid(), "ulid");
 
-const items = ref([]);
+const items = reactive(new Map());
 
-onBeforeMount(async () => {
-  const savedItems = await await db.values().all();
-  if (savedItems.length === 0) {
-    items.value.push({
-      id: ulid(),
-      title: "Item 1",
-      x: 0,
-      y: 100,
-      width: 200,
-      height: 200,
-    });
-    saveItem(items.value[0]);
-  } else {
-    items.value.splice(0, items.value.length, ...savedItems);
+const useDbHistory = makeDataStore("dbHistory");
+const dbHistory = useDbHistory();
+
+const unsubscribe = composeDataStore({
+  store: dbHistory,
+  data: items,
+  runAfter: async ({data, name, deletedItems}) => {
+      //update selected items
+      selectedItems.value = selectedItems.value.filter((id) => {
+        return data.has(id);
+      });
+
+      updateSelectionBox(selectedItems.value.map((id) => items.get(id)));
+
+      const dbBatch = [];
+
+      //save to db
+      data.forEach((item, id) => {
+        dbBatch.push({
+          type: "put",
+          key: id,
+          value: item
+        });
+      });
+
+      //delete items from db
+      for(const id of deletedItems) {
+        dbBatch.push({
+          type: "del",
+          key: id
+        });
+      }
+
+      await saveToDb(dbBatch);
   }
 });
 
+async function saveToDb(items) {
+  console.log(items, "items");
+  await db.batch(items)
+}
+
+const mousePosition = reactive({
+  x: 0,
+  y: 0,
+});
+
+const handleMouseMove = (event) => {
+  mousePosition.x = event.clientX;
+  mousePosition.y = event.clientY;
+};
+
+onBeforeMount(async () => {
+  const savedItems = await db.values().all();
+
+  console.log(savedItems, "savedItems");
+
+  dbHistory.loadDb(new Map(
+    savedItems.map((item) => {
+      return [item.id, item];
+    })
+  ));
+
+  savedItems.forEach((item) => {
+    items.set(item.id, item);
+  });
+
+ 
+
+  // const id = ulid();
+  // dbHistory.put(id, {
+  //   id,
+  //   title: "Item 1",
+  //   x: 0,
+  //   y: 100,
+  //   width: 200,
+  //   height: 200,
+  // });
+
+  // items.value.splice(0, items.value.length, ...savedItems);
+});
+
 async function saveItem(item) {
-  await db.put(item.id, item);
+  dbHistory.put(item.id, { ...item });
   console.log("item saved:", item);
+}
+
+async function saveItems(items) {
+  dbHistory.multiPut(items, "saveItems");
 }
 
 ///---------------------------------------dashboard------------------------------/////
 const dashboardContainer = ref(null);
 const selectedItems = ref([]);
+const dragGroup = ref([]);
 const selectionBox = ref({
   id: "selection-box",
   x: 0,
@@ -172,23 +253,25 @@ const updateSelectionBoxFromDrag = () => {
 // New function to select items that fall within the selection box
 const selectItemsInBox = () => {
   const box = selectionDragBox.value;
-  const newSelectedItems = items.value
-    .filter((item) => {
-      // Check if item overlaps with selection box
-      return (
-        item.x < box.x + box.width &&
-        item.x + item.width > box.x &&
-        item.y < box.y + box.height &&
-        item.y + item.height > box.y
-      );
-    })
-    .map((item) => item.id);
+  const newSelectedItems = [];
+
+  // Iterate through Map entries to check each item
+  for (const [key, item] of items) {
+    // Check if item overlaps with selection box
+    if (
+      item.x < box.x + box.width &&
+      item.x + item.width > box.x &&
+      item.y < box.y + box.height &&
+      item.y + item.height > box.y
+    ) {
+      newSelectedItems.push(key);
+    }
+  }
 
   selectedItems.value = newSelectedItems;
 };
 
 const handleDashboardPointerMove = (event) => {
-  console.log(isDragging.value, "is dragging");
   if (!isDragging.value) return;
 
   // Get current position
@@ -206,7 +289,8 @@ const handleDashboardPointerMove = (event) => {
 };
 
 const handleDashboardPointerUp = (event) => {
-  console.log("pointer up", event);
+
+  console.log("pointer up", event, isDragging.value);
   if (!isDragging.value) return;
 
   // Release pointer capture
@@ -219,7 +303,8 @@ const handleDashboardPointerUp = (event) => {
   if (selectionDragBox.value.width < 5 && selectionDragBox.value.height < 5) {
     selectedItems.value = [];
   }
-  //clear selection drag box
+
+  // Clear selection drag box
   selectionDragBox.value = {
     id: "selection-drag-box",
     x: 0,
@@ -227,10 +312,24 @@ const handleDashboardPointerUp = (event) => {
     width: 0,
     height: 0,
   };
+
+  // Reset isDragging flag
+  isDragging.value = false;
 };
 
 // Keep the existing updateSelectionBox function for multi-select
 function updateSelectionBox(selected) {
+  if (selected.length === 0) {
+    selectionBox.value = {
+      id: "selection-box",
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0,
+    };
+    return;
+  }
+
   const { x, y, width, height } = selected.reduce(
     (acc, item) => {
       acc.x = Math.min(acc.x, item.x);
@@ -253,7 +352,7 @@ function updateSelectionBox(selected) {
 
 watch(selectedItems, (newVal) => {
   if (newVal.length > 1) {
-    const selected = items.value.filter((item) => newVal.includes(item.id));
+    const selected = newVal.map((id) => items.get(id)).filter(Boolean);
     updateSelectionBox(selected);
   } else {
     selectionBox.value = {
@@ -275,28 +374,36 @@ const snapToGrid = (value) => {
 };
 
 const updateItemPosition = (id, position) => {
-  const item = items.value.find((item) => item.id === id);
+  const item = items.get(id);
+
+  console.log(items, "items");
+  console.log(item, "item");
 
   if (item && selectedItems.value.length === 1) {
     // Single item selection - just move the item directly
     item.x = position.x;
     item.y = position.y;
   } else if (item && selectedItems.value.length > 1) {
+
     // Multiple items selected - calculate relative movement
     const deltaX = position.x - item.x;
     const deltaY = position.y - item.y;
 
     // Move all selected items by the same delta
-    [...selectedItems.value, "selection-box"].forEach((selectedId) => {
-      const selectedItem = items.value.find((item) => item.id === selectedId);
+    selectedItems.value.forEach((selectedId) => {
+      if(!dragGroup.value.includes(selectedId)) {
+        dragGroup.value.push(selectedId);
+      }
+      const selectedItem = items.get(selectedId);
       if (selectedItem) {
         selectedItem.x += deltaX;
         selectedItem.y += deltaY;
-      } else if (selectedId === "selection-box") {
-        selectionBox.value.x += deltaX;
-        selectionBox.value.y += deltaY;
       }
     });
+
+    // Also update the selection box
+    selectionBox.value.x += deltaX;
+    selectionBox.value.y += deltaY;
   }
 };
 
@@ -305,7 +412,7 @@ const onDragEnd = (id) => {
 
   if (selectedItems.value.length === 1) {
     // Single item case
-    const item = items.value.find((item) => item.id === id);
+    const item = items.get(id);
     if (item && dashboardContainer.value) {
       // Snap to grid
       item.x = snapToGrid(item.x);
@@ -318,29 +425,28 @@ const onDragEnd = (id) => {
   } else if (selectedItems.value.length > 1) {
     // Multiple items case
     if (dashboardContainer.value) {
-      const containerWidth = dashboardContainer.value.clientWidth;
-      const containerHeight = dashboardContainer.value.clientHeight;
-
       const newPositions = [];
       // Process all selected items
       selectedItems.value.forEach((selectedId) => {
-        const selectedItem = items.value.find((item) => item.id === selectedId);
+        const selectedItem = items.get(selectedId);
         if (selectedItem) {
           // Snap to grid
           selectedItem.x = snapToGrid(selectedItem.x);
           selectedItem.y = snapToGrid(selectedItem.y);
 
-          newPositions.push(selectedItem);
+          newPositions.push([selectedId, {...selectedItem}]);
 
           // Apply boundary constraints
           applyBoundaryConstraints(selectedItem);
-          saveItem(selectedItem);
         }
       });
 
-      updateSelectionBox(newPositions);
+      //update drag group
+      dragGroup.value = [];
 
-      //apply selection box final position
+      saveItems(newPositions);
+
+      updateSelectionBox(newPositions.map(([key, item]) => item));
     }
   }
 };
@@ -378,7 +484,7 @@ const applyBoundaryConstraints = (item) => {
 
 const onResize = (id, resize) => {
   console.log("resize", id, resize);
-  const item = items.value.find((item) => item.id === id);
+  const item = items.get(id);
   if (item) {
     // Handle resize based on the direction
     const direction = resize.direction;
@@ -424,7 +530,7 @@ const onResize = (id, resize) => {
 
 const onResizeEnd = (id) => {
   console.log("resize end", id);
-  const item = items.value.find((item) => item.id === id);
+  const item = items.get(id);
   if (item && dashboardContainer.value) {
     // Snap to grid
     item.width = snapToGrid(item.width);
@@ -500,20 +606,240 @@ const onItemClick = (id, { shiftKey, ctrlKey }) => {
 };
 
 const onDashboardClick = (event) => {
-  //   Only clear selection if the click was directly on the dashboard container
-  //   and not on a child element (which would be a dashboard item)
-  if (isDragging.value === true) {
-    isDragging.value = false;
-    return;
-  }
+  return;
+  // Only clear selection if the click was directly on the dashboard container
+  // and not on a child element (which would be a dashboard item)
   if (event.target === dashboardContainer.value) {
     selectedItems.value = [];
   }
 };
 
+///---------------------------------------hot keys------------------------------/////
+
+const keysPressed = reactive(new Map());
+
+const matchedCommand = ref(null);
+
+function handleKeyDown(event) {
+  if (keysPressed.has(event.key.toLowerCase())) {
+    return;
+  }
+
+  // Prevent default browser undo/redo behavior when our shortcuts are used
+  if (
+    (event.ctrlKey || event.metaKey) &&
+    (event.key === "z" ||
+      event.key === "y" ||
+      (event.shiftKey && event.key === "Z"))
+  ) {
+    event.preventDefault();
+  }
+
+  // Use ' ' for space in the keys map
+  const keyValue = event.key === ' ' ? 'space' : event.key.toLowerCase();
+  
+  keysPressed.set(keyValue, {
+    longhold: false,
+    id: ulid(),
+    holdTimer: setTimeout(() => {
+      keysPressed.set(keyValue, {
+        ...keysPressed.get(keyValue),
+        longhold: true,
+      });
+    }, 500),
+  });
+}
+
+function handleKeyUp(event) {
+  const keyValue = event.key === ' ' ? 'space' : event.key.toLowerCase();
+  
+  if (keysPressed.has(keyValue)) {
+    clearTimeout(keysPressed.get(keyValue).holdTimer);
+    setTimeout(() => {
+      keysPressed.delete(keyValue);
+    }, 50);
+  }
+}
+
+onMounted(() => {
+  window.addEventListener("keydown", handleKeyDown);
+  window.addEventListener("keyup", handleKeyUp);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener("keydown", handleKeyDown);
+});
+
+const commands = reactive({
+  undo: () => {
+    dbHistory.undo();
+  },
+  redo: () => {
+    dbHistory.redo();
+  },
+  addItem: () => {
+    const id = ulid();
+    
+    // Get dashboard container dimensions
+    const rect = dashboardContainer.value.getBoundingClientRect();
+    
+    // Calculate position relative to dashboard
+    const relativeX = mousePosition.x - rect.left;
+    const relativeY = mousePosition.y - rect.top;
+    
+    // Snap to grid
+    const snappedX = snapToGrid(relativeX);
+    const snappedY = snapToGrid(relativeY);
+    
+    dbHistory.put(id, {
+      id,
+      title: "Item 1",
+      x: snappedX,
+      y: snappedY,
+      width: 200,
+      height: 200,
+    });
+  },
+  deleteItem: () => {
+    if(selectedItems.value.length > 1) {
+      dbHistory.multiDel(selectedItems.value, "Delete item");
+    } else {
+      dbHistory.del(selectedItems.value[0]);
+    }
+  },
+  copyItem: () => {
+    // Only copy if there's at least one item selected
+    if (selectedItems.value.length > 0) {
+      // Store the selected items in localStorage or in a variable
+      const itemsToCopy = selectedItems.value.map(id => {
+        const item = items.get(id);
+        return { ...item }; // Create a copy of the item
+      });
+      localStorage.setItem('dashboardCopiedItems', JSON.stringify(itemsToCopy));
+      console.log("Items copied:", itemsToCopy);
+    }
+  },
+  pasteItem: () => {
+    // Retrieve copied items
+    const copiedItemsJson = localStorage.getItem('dashboardCopiedItems');
+    if (copiedItemsJson) {
+      const copiedItems = JSON.parse(copiedItemsJson);
+      
+      // Calculate offset for pasted items
+      const offsetX = 50;
+      const offsetY = 50;
+      
+      // Clear current selection first
+      selectedItems.value = [];
+      
+      // Create an array of [id, item] pairs for multiPut
+      const newItems = copiedItems.map(item => {
+        const newId = ulid();
+        // Create new item with offset position
+        const newItem = {
+          ...item,
+          id: newId,
+          x: item.x + offsetX,
+          y: item.y + offsetY
+        };
+        
+        // Add to selected items
+        selectedItems.value.push(newId);
+        
+        // Return [id, item] pair for multiPut
+        return [newId, newItem];
+      });
+      
+      // Use multiPut to add all items at once
+      dbHistory.multiPut(newItems, "Paste items");
+      
+      console.log("Items pasted:", newItems.length);
+    }
+  },
+});
+
+const hotKeys = new Map([
+  ["ctrl+z", "undo"],
+  ["ctrl+y", "redo"],
+  ["ctrl+shift+z", "redo"],
+  ["space+a", "addItem"],
+  ["space+w", "deleteItem"],
+  ["ctrl+c", "copyItem"],
+  ["ctrl+v", "pasteItem"]
+]);
+
+// Track the last executed command and when it happened
+const lastCommand = reactive({
+  name: null,
+  timestamp: 0,
+  keys: [],
+  modifiers: [],
+});
+
+watch(keysPressed, (newVal) => {
+  hotKeys.forEach((command, key) => {
+    let keys = key.split("+");
+    //ctrl to control
+    keys = keys.map((key) => key.replace("ctrl", "control"));
+    if (keys.every((key) => newVal.has(key))) {
+      const currentKeys = Array.from(newVal.entries())
+        .filter(([key]) => !["ctrl", "shift", "alt", "meta"].includes(key))
+        .map(([key, value]) => {
+          return {
+            key,
+            ...value,
+          };
+        });
+
+      // Check if we have the same non-modifier keys as the last command
+      // and if their IDs match the last execution
+      if (
+        lastCommand.name === command &&
+        lastCommand.keys.length === currentKeys.length &&
+        currentKeys.every((currentKey) => {
+          return lastCommand.keys.some(
+            (lastKey) =>
+              lastKey.key === currentKey.key && lastKey.id === currentKey.id
+          );
+        })
+      ) {
+        // Same key IDs as last execution, so don't run the command again
+        return;
+      }
+
+      // Prevent the same command from being executed twice in quick succession
+      const now = Date.now();
+
+      matchedCommand.value = command;
+      //execute command
+      commands[command]();
+      //update last command
+      lastCommand.name = command;
+      lastCommand.timestamp = now;
+      lastCommand.keys = Array.from(newVal.entries())
+        .filter(([key]) => !["ctrl", "shift", "alt", "meta"].includes(key))
+        .map(([key, value]) => {
+          return {
+            key,
+            ...value,
+          };
+        });
+      lastCommand.modifiers = Array.from(newVal.entries()).filter(([key]) =>
+        ["ctrl", "shift", "alt", "meta"].includes(key)
+      );
+      //clear matched command
+      matchedCommand.value = null;
+    }
+  });
+});
+
+//---------------------------------hot keys END--------------------------------//
+
 const handleDashboardPointerCancel = (event) => {
   console.log("pointer cancel", event);
 };
+
+
 </script>
 
 <style scoped>

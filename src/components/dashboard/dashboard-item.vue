@@ -7,7 +7,7 @@
     @pointerup="handlePointerUp"
     @pointercancel="handlePointerUp"
     :class="{
-      'is-dragging': isDragging,
+      'is-dragging': isDragging || isInDragGroup,
       'debug-handle': debugHandle,
       selected: isSelected,
     }"
@@ -19,7 +19,7 @@
     }"
   >
     <div class="dashboard-item-content" :class="{ 'lock-content': lockContent }">
-      {{ props.selected }}
+      
       <slot name="default">
         {{ title }}
       </slot>
@@ -84,7 +84,7 @@ const props = defineProps({
     required: true,
   },
   id: {
-    type: Number,
+    type: String,
     required: true,
   },
   x: {
@@ -109,11 +109,19 @@ const props = defineProps({
     type: Array,
     default: [],
   },
+  dragGroup: {
+    type: Array,
+    default: [],
+  },
 });
 
 const isSelected = computed(() => {
   console.log("isSelected", props.selected, props.id);
   return props.selected.includes(props.id);
+});
+
+const isInDragGroup = computed(() => {
+  return props.dragGroup.includes(props.id);
 });
 
 const emit = defineEmits([
@@ -162,6 +170,7 @@ const handlePointerMove = (event) => {
     isDragging.value = true;
   }
   if (!isDragging.value) return;
+  
   const deltaX = event.clientX - startX.value;
   const deltaY = event.clientY - startY.value;
   emit("update:position", {
@@ -220,6 +229,26 @@ const handleResizePointerUp = (event) => {
     isResizing.value = false;
   }
   emit("update:resize-end");
+};
+
+const selectItemsInBox = () => {
+  const box = selectionDragBox.value;
+  const newSelectedItems = [];
+
+  // Iterate through Map entries to check each item
+  for (const [key, item] of items) {
+    // Check if item overlaps with selection box
+    if (
+      item.x < box.x + box.width &&
+      item.x + item.width > box.x &&
+      item.y < box.y + box.height &&
+      item.y + item.height > box.y
+    ) {
+      newSelectedItems.push(key);
+    }
+  }
+
+  selectedItems.value = newSelectedItems;
 };
 </script>
 

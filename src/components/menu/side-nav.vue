@@ -16,6 +16,10 @@
         <span class="material-symbols-outlined">settings</span>
         <span class="text">Settings</span>
       </router-link>
+      <router-link to="/history-database-test">
+        <span class="material-symbols-outlined">chat_info</span>
+        <span class="text">History Database Test</span>
+      </router-link>
     </div>
   </div>
 </template>

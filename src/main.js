@@ -6,12 +6,13 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { createPinia } from 'pinia'
 import Home from './pages/home/home.vue'
 import About from './pages/about/about.vue'
-
+import HistoryDatabaseTest from './components/history-database-test/history-database.vue'
 const router = createRouter({   
   history: createWebHistory(),
   routes: [
     { path: '/', component: Home },
     { path: '/about', component: About },
+    { path: '/history-database-test', component: HistoryDatabaseTest },
   ],
 })
 
