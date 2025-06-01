@@ -12,6 +12,7 @@ export default function composeDataStore({
 
         // If no current key, just return the cloned db
         if (!state.meta.currentKey) {
+            console.log(clonedDb, "no current key", "tag");
             return clonedDb;
         }
 
@@ -27,6 +28,7 @@ export default function composeDataStore({
         //sliced updates
         const slicedUpdates = updatesArray.slice(0, currentIndex + 1);
 
+        console.log(slicedUpdates, "slicedUpdates", "tag");
 
         //apply updates to cloned db
         for (const [key, update] of slicedUpdates) {
@@ -73,7 +75,8 @@ export default function composeDataStore({
                 "undo",
                 "redo",
                 "multiPut",
-                "multiDel"
+                "multiDel",
+                "bulkUpdates"
             ].includes(name))
                 return;
 

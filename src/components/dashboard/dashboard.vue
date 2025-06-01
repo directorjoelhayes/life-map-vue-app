@@ -69,11 +69,11 @@ import makeDataStore from "../../stores/make-data-store";
 // const dashboardStore = useDashboardStore();
 
 ///---------------------------------------database------------------------------/////
-import { BrowserLevel } from "browser-level";
+// import { BrowserLevel } from "browser-level";
 
-console.log(BrowserLevel, "browser level");
+// console.log(BrowserLevel, "browser level");
 
-const db = new BrowserLevel("example", { valueEncoding: "json" });
+// const db = new BrowserLevel("example", { valueEncoding: "json" });
 
 import { ref, watch } from "vue";
 import { ulid } from "ulid";
@@ -96,26 +96,7 @@ const unsubscribe = composeDataStore({
 
       updateSelectionBox(selectedItems.value.map((id) => items.get(id)));
 
-      const dbBatch = [];
-
-      //save to db
-      data.forEach((item, id) => {
-        dbBatch.push({
-          type: "put",
-          key: id,
-          value: item
-        });
-      });
-
-      //delete items from db
-      for(const id of deletedItems) {
-        dbBatch.push({
-          type: "del",
-          key: id
-        });
-      }
-
-      await saveToDb(dbBatch);
+      await dbHistory.saveDb();
   }
 });
 
@@ -135,21 +116,28 @@ const handleMouseMove = (event) => {
 };
 
 onBeforeMount(async () => {
-  const savedItems = await db.values().all();
 
-  console.log(savedItems, "savedItems");
+  //clear db
+  // await dbHistory.clearDb();
 
-  dbHistory.loadDb(new Map(
-    savedItems.map((item) => {
-      return [item.id, item];
-    })
-  ));
+  try {
+    await dbHistory.loadDb();
+  } catch (error) {
+    console.error("Error loading db", error);
+  }
 
-  savedItems.forEach((item) => {
-    items.set(item.id, item);
-  });
+  try {
+    const savedItems = dbHistory.getAll;
 
- 
+    //remove all items from items
+    items.clear();
+
+    savedItems.forEach((item) => {
+      items.set(item.id, item);
+    });
+  } catch (error) {
+    console.error("Error loading items", error);
+  }
 
   // const id = ulid();
   // dbHistory.put(id, {
@@ -616,48 +604,60 @@ const onDashboardClick = (event) => {
 
 ///---------------------------------------hot keys------------------------------/////
 
-const keysPressed = reactive(new Map());
-
-const matchedCommand = ref(null);
-
 function handleKeyDown(event) {
-  if (keysPressed.has(event.key.toLowerCase())) {
-    return;
-  }
-
-  // Prevent default browser undo/redo behavior when our shortcuts are used
-  if (
-    (event.ctrlKey || event.metaKey) &&
-    (event.key === "z" ||
-      event.key === "y" ||
-      (event.shiftKey && event.key === "Z"))
-  ) {
+  // Prevent default browser shortcuts for our commands
+  if (event.ctrlKey && (event.key === 'z' || event.key === 'y' || (event.shiftKey && event.key === 'Z'))) {
     event.preventDefault();
   }
-
-  // Use ' ' for space in the keys map
-  const keyValue = event.key === ' ' ? 'space' : event.key.toLowerCase();
   
-  keysPressed.set(keyValue, {
-    longhold: false,
-    id: ulid(),
-    holdTimer: setTimeout(() => {
-      keysPressed.set(keyValue, {
-        ...keysPressed.get(keyValue),
-        longhold: true,
-      });
-    }, 500),
-  });
+  // Handle all shortcuts directly in the keydown event
+  if (event.ctrlKey && event.key === 'z' && !event.shiftKey) {
+    // Ctrl+Z: Undo
+    commands.undo();
+  } else if ((event.ctrlKey && event.key === 'y') || (event.ctrlKey && event.shiftKey && event.key === 'Z')) {
+    // Ctrl+Y or Ctrl+Shift+Z: Redo
+    commands.redo();
+  } else if (event.ctrlKey && event.key === 'c') {
+    // Ctrl+C: Copy
+    commands.copyItem();
+  } else if (event.ctrlKey && event.key === 'v') {
+    // Ctrl+V: Paste
+    commands.pasteItem();
+  } else if (event.key === ' ') {
+    // Space key handling
+    spacePressed = true;
+    
+    // Start listening for the second key after space
+    document.addEventListener('keydown', handleSpaceCombo);
+  }
+}
+
+// Variable to track space key state
+let spacePressed = false;
+
+// Function to handle space + another key combinations
+function handleSpaceCombo(event) {
+  if (!spacePressed) return;
+  
+  if (event.key === 'a') {
+    // Space+A: Add item
+    commands.addItem();
+    event.preventDefault();
+  } else if (event.key === 'w') {
+    // Space+W: Delete item
+    commands.deleteItem();
+    event.preventDefault();
+  }
+  
+  // Remove this listener after handling the combo
+  document.removeEventListener('keydown', handleSpaceCombo);
 }
 
 function handleKeyUp(event) {
-  const keyValue = event.key === ' ' ? 'space' : event.key.toLowerCase();
-  
-  if (keysPressed.has(keyValue)) {
-    clearTimeout(keysPressed.get(keyValue).holdTimer);
-    setTimeout(() => {
-      keysPressed.delete(keyValue);
-    }, 50);
+  if (event.key === ' ') {
+    spacePressed = false;
+    // Clean up the combo listener if space is released
+    document.removeEventListener('keydown', handleSpaceCombo);
   }
 }
 
@@ -668,6 +668,8 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener("keydown", handleKeyDown);
+  window.removeEventListener("keyup", handleKeyUp);
+  document.removeEventListener('keydown', handleSpaceCombo);
 });
 
 const commands = reactive({
@@ -767,73 +769,6 @@ const hotKeys = new Map([
   ["ctrl+c", "copyItem"],
   ["ctrl+v", "pasteItem"]
 ]);
-
-// Track the last executed command and when it happened
-const lastCommand = reactive({
-  name: null,
-  timestamp: 0,
-  keys: [],
-  modifiers: [],
-});
-
-watch(keysPressed, (newVal) => {
-  hotKeys.forEach((command, key) => {
-    let keys = key.split("+");
-    //ctrl to control
-    keys = keys.map((key) => key.replace("ctrl", "control"));
-    if (keys.every((key) => newVal.has(key))) {
-      const currentKeys = Array.from(newVal.entries())
-        .filter(([key]) => !["ctrl", "shift", "alt", "meta"].includes(key))
-        .map(([key, value]) => {
-          return {
-            key,
-            ...value,
-          };
-        });
-
-      // Check if we have the same non-modifier keys as the last command
-      // and if their IDs match the last execution
-      if (
-        lastCommand.name === command &&
-        lastCommand.keys.length === currentKeys.length &&
-        currentKeys.every((currentKey) => {
-          return lastCommand.keys.some(
-            (lastKey) =>
-              lastKey.key === currentKey.key && lastKey.id === currentKey.id
-          );
-        })
-      ) {
-        // Same key IDs as last execution, so don't run the command again
-        return;
-      }
-
-      // Prevent the same command from being executed twice in quick succession
-      const now = Date.now();
-
-      matchedCommand.value = command;
-      //execute command
-      commands[command]();
-      //update last command
-      lastCommand.name = command;
-      lastCommand.timestamp = now;
-      lastCommand.keys = Array.from(newVal.entries())
-        .filter(([key]) => !["ctrl", "shift", "alt", "meta"].includes(key))
-        .map(([key, value]) => {
-          return {
-            key,
-            ...value,
-          };
-        });
-      lastCommand.modifiers = Array.from(newVal.entries()).filter(([key]) =>
-        ["ctrl", "shift", "alt", "meta"].includes(key)
-      );
-      //clear matched command
-      matchedCommand.value = null;
-    }
-  });
-});
-
-//---------------------------------hot keys END--------------------------------//
 
 const handleDashboardPointerCancel = (event) => {
   console.log("pointer cancel", event);

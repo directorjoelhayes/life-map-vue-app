@@ -1,6 +1,21 @@
 import { defineStore } from "pinia";
 import { ulid } from "ulid";
+import { BrowserLevel } from "browser-level";
+
+// console.log(BrowserLevel, "browser level");
+
+
 export default function makeDataStore(name) {
+
+    const persistentDb = new BrowserLevel(name, { valueEncoding: "json" });
+
+    const subLevel = {
+        updates: persistentDb.sublevel("updates", { valueEncoding: "json" }),
+        meta: persistentDb.sublevel("meta", { valueEncoding: "json" }),
+        db: persistentDb.sublevel("db", { valueEncoding: "json" }),
+    }
+
+
     return defineStore(name, {
         state: () => ({
             updates: new Map(),
@@ -16,7 +31,7 @@ export default function makeDataStore(name) {
                 updates: 0,
             }
         }),
-        getters: {         
+        getters: {
             getAll: (state) => {
                 //cloned db
                 const clonedDb = new Map(state.db);
@@ -40,6 +55,10 @@ export default function makeDataStore(name) {
                 //sliced updates
                 const slicedUpdates = updatesArray.slice(0, currentIndex + 1);
 
+                console.log(slicedUpdates, "slicedUpdates");
+                console.log(currentIndex, "slicedUpdates");
+
+                //apply updates to cloned db
                 //apply updates to cloned db
                 for (const [key, update] of slicedUpdates) {
                     if (update.type === "put") {
@@ -48,16 +67,101 @@ export default function makeDataStore(name) {
                     if (update.type === "del") {
                         clonedDb.delete(update.target);
                     }
-                }
+                    if (update.type === "multiPut") {
 
+                        for (const [key, value] of update.updates) {
+                            console.log(key, value, "key, value", "composed");
+                            clonedDb.set(key, value);
+                        }
+                    }
+                    if (update.type === "multiDel") {
+                        for (const key of update.keys) {
+                            console.log(key, "key", "composed");
+                            clonedDb.delete(key);
+                        }
+                    }
+                }
                 return clonedDb;
             },
         },
         actions: {
-            loadDb(data) {
-                this.db = data;
+            setItem(key, value) {
+                this.db.set(key, value);
+                return this.put(key, value);
             },
-            treeCheck() {
+            deleteItem(key) {
+                this.db.delete(key);
+                return this.del(key);
+            },
+            async clearDb() {
+                await subLevel.db.clear();
+                await subLevel.updates.clear();
+                await subLevel.meta.clear();
+            },
+            async loadDb() {
+                const dbData = await subLevel.db.iterator().all();
+                this.db = new Map(dbData);
+                const updatesData = await subLevel.updates.iterator().all();
+                console.log(updatesData, "updatesData");
+                this.updates = new Map(updatesData);
+                const metaData = await subLevel.meta.iterator().all();
+                metaData.forEach(([key, value]) => {
+                    this.meta[key] = value;
+                });
+            },
+            async saveDb() {
+                const dbData = Array.from(this.db.entries()).map(([key, value]) => ({
+                    key,
+                    value,
+                    type: "put",
+                }));
+                
+                const currentDbData = await subLevel.db.iterator().all();
+
+                //look for deletes
+                const deleteData = currentDbData.filter(([key, value]) => !this.db.has(key)).map(([key, value]) => ({
+                    key,
+                    value,
+                    type: "del",
+                }));
+
+                const allData = [...dbData, ...deleteData];
+
+                await subLevel.db.batch(allData);
+
+                
+
+                const updatesData = Array.from(this.updates.entries())
+                    .map(([key, value]) => ({
+                        key,
+                        value,
+                        type: "put",
+                    }));
+                
+                // Get current updates data to check for deletes
+                const currentUpdatesData = await subLevel.updates.iterator().all();
+                
+                // Look for deletes in updates
+                const deleteUpdatesData = currentUpdatesData.filter(([key, value]) => !this.updates.has(key)).map(([key, value]) => ({
+                    key,
+                    value,
+                    type: "del",
+                }));
+                
+                const allUpdatesData = [...updatesData, ...deleteUpdatesData];
+                
+                await subLevel.updates.batch(allUpdatesData);
+
+                const dbMeta = Object.entries(this.meta).map(([key, value]) => ({
+                    key,
+                    value,
+                    type: "put",
+                }));
+                await subLevel.meta.batch(dbMeta);
+
+                console.log("saved");
+            },
+            async treeCheck() {
 
                 //check if updates is empty
                 if (this.updates.size === 0) {
@@ -66,33 +170,33 @@ export default function makeDataStore(name) {
 
                 const updatesArray = Array.from(this.updates.entries());
                 const currentIndex = updatesArray.findIndex(
-                  ([key]) => key === this.meta.currentKey
+                    ([key]) => key === this.meta.currentKey
                 );
-            
+
                 if (currentIndex === -1) {
-                  return;
+                    return;
                 }
-            
+
                 if (currentIndex < updatesArray.length - 1) {
                     //slice at current index
                     const slicedUpdates = updatesArray.slice(currentIndex + 1, updatesArray.length);
-            
+
                     //delete all updates after current index
                     for (const [key, update] of slicedUpdates) {
-                      if (update.type === "put" || update.type === "multiPut") {
-                        this.updates.delete(key);
-                      }
+                        if (update.type === "put" || update.type === "multiPut") {
+                            this.updates.delete(key);
+                        }
                     }
-            
+
                     //update meta
                     this.meta.updates = currentIndex + 1;
                 }
+
+
             },
-            put(key, value) {
+            async put(key, value) {
 
-                console.log(this)
-
-                this.treeCheck();
+                await this.treeCheck();
 
                 const updateKey = `${ulid()}:${key}`;
 
@@ -117,18 +221,20 @@ export default function makeDataStore(name) {
                 this.meta.updates++;
 
                 if (this.meta.updates === this.meta.clearThreshold.increment) {
-                    this.bulkUpdates(this.updates);
+                    await this.bulkUpdates(this.updates);
                     this.meta.updates = this.meta.historySize;
+                    await this.saveDb();
+                    console.log("saved");
                 }
             },
-            del(key) {
+            async del(key) {
 
                 console.log(key, "key");
 
                 this.treeCheck();
 
                 const lastUpdate = this.updates.get(this.meta.currentKey);
-                
+
 
                 const updateKey = `${ulid()}:${key}`;
                 this.updates.set(updateKey, {
@@ -142,13 +248,15 @@ export default function makeDataStore(name) {
 
                 this.meta.currentKey = updateKey;
                 this.meta.updates++;
+
+                // await this.saveDb();
             },
-            multiPut(updates, action) {
+            async multiPut(updates, action) {
 
                 this.treeCheck();
 
                 const updateKey = `${ulid()}:multiPut`;
-                
+
                 const lastUpdate = this.updates.get(this.meta.currentKey);
                 this.updates.set(updateKey, {
                     type: "multiPut",
@@ -158,14 +266,16 @@ export default function makeDataStore(name) {
                     last: lastUpdate,
                     timestamp: Date.now(),
                 })
-                
+
                 this.meta.currentKey = updateKey;
                 this.meta.updates++;
+
+                // await this.saveDb();
             },
-            multiDel(keys, action) {
-                
+            async multiDel(keys, action) {
+
                 this.treeCheck();
-                
+
                 const updateKey = `${ulid()}:multiDel`;
                 const lastUpdate = this.updates.get(this.meta.currentKey);
                 this.updates.set(updateKey, {
@@ -176,11 +286,13 @@ export default function makeDataStore(name) {
                     last: lastUpdate,
                     timestamp: Date.now(),
                 })
-                
+
                 this.meta.currentKey = updateKey;
                 this.meta.updates++;
+
+                // await this.saveDb();
             },
-            bulkUpdates(updates) {
+            async bulkUpdates(updates) {
                 //select clear number of updates
                 const clearNumber = this.meta.clearThreshold.clearNumber;
                 // Maps don't have slice method - convert to array, slice, then process
@@ -194,12 +306,23 @@ export default function makeDataStore(name) {
                     if (update.type === "del") {
                         this.db.delete(update.target);
                     }
+                    if (update.type === "multiPut") {
+                        for (const [key, value] of update.updates) {
+                            this.db.set(key, value);
+                        }
+                    }
+                    if (update.type === "multiDel") {
+                        for (const key of update.keys) {
+                            this.db.delete(key);
+                        }
+                    }
                 }
 
                 //remove clear updates from updates
                 clearUpdates.forEach(([key]) => {
                     updates.delete(key);
                 });
+
             },
             get(id) {
                 // Loop through all keys in a map
