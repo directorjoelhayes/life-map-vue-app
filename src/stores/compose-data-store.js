@@ -75,12 +75,11 @@ export default function composeDataStore({
                 "undo",
                 "redo",
                 "multiPut",
-                "multiDel",
-                "bulkUpdates"
+                "multiDel"
             ].includes(name))
                 return;
 
-            const beforeUpdate = new Map(store.updates);
+           
 
             // this will trigger if the action succeeds and after it has fully run.
             // it waits for any returned promises to resolve
@@ -88,21 +87,15 @@ export default function composeDataStore({
                 //compose data
                 const composedData = composeData(store);
 
-
-                console.log(composedData, "composedData");
-
-                let longerSet = store.updates;
-                if (beforeUpdate.size > store.updates.size) {
-                    longerSet = beforeUpdate;
-                }
-
                 // const updates = Array.from(longerSet.entries());
 
                 const toUpdate = new Map();
 
                 //only keep last update 
-                for (const [key, update] of longerSet.entries()) {
-                    if(update.type === "multiPut") {
+                for (const [key, update] of store.updates.entries()) {
+                    if(update.type === "multiPut"
+                        || update.type === "multiDel"
+                    ) {
                         for (const [key, value] of update.updates) {
                             toUpdate.set(key, {...value, target: key});
                         }
@@ -111,12 +104,14 @@ export default function composeDataStore({
                     }
                 }
 
+                Array.from(toUpdate.entries()).forEach(([key, update]) => {
+                    console.log(update, "update");
+                });
+
 
                 const deletedItems = [];
                 //apply updates
                 for (const [key, update] of toUpdate.entries()) {
-
-                    console.log(composedData.has(update.target), "has");
                     //was deleted
                     if (!composedData.has(update.target)) {
                         if(data.has(update.target)) {
@@ -130,10 +125,8 @@ export default function composeDataStore({
                             const value = composedData.get(update.target);
                             data.set(update.target, {...value});
                         } else {
-                            console.log("update", update.target);
                             const updatedValue = composedData.get(update.target);
                             const currentValue = data.get(update.target);
-                            console.log(updatedValue, currentValue, "updatedValue");
                             Object.assign(currentValue, updatedValue);
                         }
                     }

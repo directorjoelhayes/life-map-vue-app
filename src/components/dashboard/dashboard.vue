@@ -681,6 +681,8 @@ const commands = reactive({
   },
   addItem: () => {
     const id = ulid();
+
+    console.log(id, "id", "update");
     
     // Get dashboard container dimensions
     const rect = dashboardContainer.value.getBoundingClientRect();

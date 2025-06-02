@@ -8,31 +8,62 @@
         <button @click="handlePut()">Put</button>
       </Col>
       <Col xs="12" :sm="6" :md="4" :lg="3">
+        <button @click="handleDel()">Del</button>
+      </Col>
+      <Col xs="12" :sm="6" :md="4" :lg="3">
+        <button @click="handlePut()">Multi Put</button>
+      </Col>
+      <Col xs="12" :sm="6" :md="4" :lg="3">
+        <button @click="handlePut()">Multi Del</button>
+      </Col>
+      <Col xs="12" :sm="6" :md="4" :lg="3">
         <button @click="handleClear()">Clear</button>
       </Col>
       <Col xs="12" :sm="6" :md="4" :lg="3">
-        <button @click="Database.actions.undo()">Undo</button>
+        <button @click="Database.undo()">Undo</button>
       </Col>
       <Col xs="12" :sm="6" :md="4" :lg="3">
-        <button @click="Database.actions.redo()">Redo</button>
+        <button @click="Database.redo()">Redo</button>
       </Col>
     </Row>
     <Row>
       <Col xs="12" :sm="6" :md="4" :lg="3">
         <div
           class="lm-card"
-          v-for="[key, value] in updates"
+          v-for="[key, value] in items"
           :key="key"
-          :class="{ 'lm-card-active': key === meta.currentKey }"
+          :class="[
+            { 'lm-card-active': key === Database.meta.currentKey },
+            value.color,
+          ]"
         >
-          {{ value.type }} | {{ value.action }} | {{ value.id.split(':')[0].slice(10, value.id.length) }}
+          {{ value.title }}
         </div>
       </Col>
       <Col xs="12" :sm="6" :md="4" :lg="3">
-        {{ Database.getAll }}
+        <div class="lm-card update-card"  
+            v-for="[key, update] in Database.updates" 
+            :key="key"
+            :class="[
+              { 'lm-card-active': key === Database.meta.currentKey }
+            ]"
+        >
+          <div class="lm-card-type" >
+            {{ update.type }}
+          </div>
+          <div
+            class="lm-card"
+            :class="[
+              { 'lm-card-active': key === Database.meta.currentKey },
+              update.value.color,
+            ]"
+          >
+            {{ update.value.title }}
+          </div>
+        </div>
       </Col>
       <Col xs="12" :sm="6" :md="4" :lg="3">
-        {{ meta }}
+        <!-- {{ meta }} -->
       </Col>
     </Row>
   </LmContainer>
@@ -44,246 +75,121 @@ import LmContainer from "../../components/container/lm-container.vue";
 import Row from "../../components/container/row.vue";
 import Col from "../../components/container/col.vue";
 
-import { reactive, computed, onMounted, onBeforeUnmount } from "vue";
+import { reactive, computed, onMounted, ref, onBeforeMount, onBeforeUnmount } from "vue";
 import { ulid } from "ulid";
 
-const db = reactive(new Map());
-const updates = reactive(new Map());
-const meta = reactive({
-  historySize: 15,
-  clearThreshold: {
-    increment: 20,
-    clearNumber: 5,
+import makeDataStore from "../../stores/make-data-store";
+import composeDataStore from "../../stores/compose-data-store";
+
+const useDbHistory = makeDataStore("dbHistoryTest");
+const Database = useDbHistory();
+
+const items = reactive(new Map());
+
+
+onBeforeMount(async () => {
+  const db = await Database.loadDb();
+
+  items.clear();
+
+  const savedItems = Database.getAll;
+
+  savedItems.forEach((item) => {
+    items.set(item.id, item);
+  });
+});
+
+const unsubscribe = composeDataStore({
+  store: Database,
+  data: items,
+  runAfter: async ({ data, name, deletedItems }) => {
+    //update selected items
+    // selectedItems.value = selectedItems.value.filter((id) => {
+    //   return data.has(id);
+    // });
+    Database.saveDb();
   },
-  updates: 0,
-  currentIndex: 0,
-  currentKey: "",
 });
 
 function handlePut() {
-  Database.actions.put(ulid(), "test");
+  const id = ulid();
+
+  const prefixes = [
+    "Dr.",
+    "Mr.",
+    "Mrs.",
+    "Ms.",
+    "Prof.",
+    "Sir",
+    "Lady",
+    "Lord",
+    "Baron",
+    "Baroness",
+    "Earl",
+    "Earless",
+    "Viscount",
+  ];
+
+  const randomNamesColors = [
+    ["apple", "red"],
+    ["banana", "yellow"],
+    ["cherry", "red"],
+    ["date", "orange"],
+    ["elderberry", "purple"],
+    ["fig", "brown"],
+    ["grape", "purple"],
+    ["honeydew", "green"],
+    ["kiwi", "green"],
+    ["lemon", "yellow"],
+    ["mango", "orange"],
+    ["nectarine", "orange"],
+    ["orange", "orange"],
+  ];
+
+  function random(pickRandom) {
+    const randomIndex = Math.floor(Math.random() * pickRandom.length);
+    return pickRandom[randomIndex];
+  }
+
+  const lastItem = items.get(items.keys().next().value);
+
+  let randomName = random(randomNamesColors);
+  if (lastItem) {
+    randomName = randomName.filter((item) => item[1] !== lastItem[1]);
+  }
+
+  Database.put(id, {
+    id,
+    title: random(prefixes) + " " + randomName[0],
+    color: randomName[1],
+    width: 200,
+    height: 20,
+  });
+}
+
+function handleDel() {
+  Array.from(items.keys()).forEach((key, index) => {
+    if (index === 0) {
+      Database.del(key, items.get(key));
+    }
+  });
 }
 
 function handleClear() {
-  Database.actions.clear();
+  Database.clearDb();
 }
-
-function dbWrapper({ updates, db, meta } = {}) {
-  //updates proxy
-
-  const getAll = computed(() => {
-    //cloned db
-    const clonedDb = new Map(db);
-
-    const updatesArray = Array.from(updates.entries());
-
-    // If no current key, just return the cloned db
-    if (!meta.currentKey) {
-      return clonedDb;
-    }
-
-    const currentIndex = updatesArray.findIndex(
-      ([key]) => key === meta.currentKey
-    );
-
-    // If key not found, return the cloned db
-    if (currentIndex === -1) {
-      return clonedDb;
-    }
-
-    //sliced updates
-    const slicedUpdates = updatesArray.slice(0, currentIndex + 1);
-
-    //apply updates to cloned db
-    for (const [key, update] of slicedUpdates) {
-      if (update.type === "put") {
-        clonedDb.set(update.target, update.value);
-      }
-      if (update.type === "del") {
-        clonedDb.delete(update.target);
-      }
-    }
-
-    return clonedDb;
-  });
-
-  const treeCheck = () => {
-    const updatesArray = Array.from(updates.entries());
-    const currentIndex = updatesArray.findIndex(
-      ([key]) => key === meta.currentKey
-    );
-
-    if (currentIndex === -1) {
-      return;
-    }
-
-    if (currentIndex < updatesArray.length - 1) {
-        //slice at current index
-        const slicedUpdates = updatesArray.slice(currentIndex + 1, updatesArray.length);
-
-        //delete all updates after current index
-        for (const [key, update] of slicedUpdates) {
-          if (update.type === "put") {
-            updates.delete(key);
-          }
-        }
-
-        //update meta
-        meta.updates = currentIndex + 1;
-        
-    } 
-    
-  };
-
-  return {
-    updates,
-    db,
-    getAll,
-    actions: {
-      put: (key, value) => {
-
-        treeCheck();
-
-        const updateKey = `${ulid()}:${key}`;
-
-        //get the last update
-        const lastUpdate = updates.get(updateKey);
-
-        //format update
-        const update = {
-          id: updateKey,
-          //helps keep chain of updates if distributed
-          last: lastUpdate,
-          target: key,
-          type: "put",
-          action: "Update user",
-          timestamp: Date.now(),
-          key,
-          value,
-        };
-
-        updates.set(updateKey, update);
-        meta.currentKey = updateKey;
-        meta.updates++;
-
-        if (meta.updates === meta.clearThreshold.increment) {
-          Database.actions.bulkUpdates(updates);
-          meta.updates = meta.historySize;
-        }
-      },
-      del: (key) => {
-
-        treeCheck();
-
-        const updateKey = `${ulid()}:${key}`;
-        updates.set(updateKey, {
-          id: updateKey,
-          type: "del",
-          target: key,
-          action: "Delete user",
-          timestamp: Date.now(),
-        });
-      },
-      bulkUpdates: (updates) => {
-        //select clear number of updates
-        const clearNumber = meta.clearThreshold.clearNumber;
-        // Maps don't have slice method - convert to array, slice, then process
-        const updatesArray = Array.from(updates.entries());
-        const clearUpdates = updatesArray.slice(0, clearNumber);
-
-        for (const [key, update] of clearUpdates) {
-          if (update.type === "put") {
-            db.set(update.target, update.value); // Using .set() for Map
-          }
-          if (update.type === "del") {
-            db.delete(update.target);
-          }
-        }
-
-        //remove clear updates from updates
-        clearUpdates.forEach(([key]) => {
-          updates.delete(key);
-        });
-      },
-      get: (id) => {
-        // Loop through all keys in a map
-        for (const [key, update] of updates) {
-          if (key.split(":")[1] === id) {
-            if (update.type === "put") {
-              return update.value;
-            }
-            if (update.type === "del") {
-              return null;
-            }
-          }
-        }
-
-        return db.get(id);
-      },
-      undo: () => {
-        const updatesArray = Array.from(updates.entries());
-        
-        if (updatesArray.length === 0) return; // No updates to undo
-        
-        if (!meta.currentKey && updatesArray.length > 0) {
-          // No current position, nothing to undo
-          return;
-        }
-        
-        const currentIndex = updatesArray.findIndex(
-          ([key]) => key === meta.currentKey
-        );
-        
-        // Only undo if we're not at the beginning
-        if (currentIndex > 0) {
-          meta.currentKey = updatesArray[currentIndex - 1][0];
-          meta.updates--;
-        }
-      },
-      redo: () => {
-        const updatesArray = Array.from(updates.entries());
-        
-        if (updatesArray.length === 0) return; // No updates to redo
-        
-        if (!meta.currentKey) {
-          // No current position, start at the beginning
-          meta.currentKey = updatesArray[0][0];
-          meta.updates = 1;
-          return;
-        }
-        
-        const currentIndex = updatesArray.findIndex(
-          ([key]) => key === meta.currentKey
-        );
-        
-        // Only redo if we're not at the end
-        if (currentIndex < updatesArray.length - 1) {
-          meta.currentKey = updatesArray[currentIndex + 1][0];
-          meta.updates++;
-        }
-      },
-      clear: () => {
-        updates.clear();
-        db.clear();
-        meta.currentKey = "";
-        meta.updates = 0;
-      },
-    },
-  };
-}
-
 
 const keysPressed = [];
 
 function handleUndo(e) {
   if (e.key === "z" && e.ctrlKey && !e.shiftKey) {
-    Database.actions.undo();
+    Database.undo();
   }
 }
 
 function handleRedo(e) {
   if (e.key === "z" && e.ctrlKey && e.shiftKey) {
-    Database.actions.redo();
+    Database.redo();
   }
 }
 
@@ -296,16 +202,78 @@ onBeforeUnmount(() => {
   window.removeEventListener("keydown", handleUndo);
   window.removeEventListener("keydown", handleRedo);
 });
-
-const Database = dbWrapper({
-  updates,
-  db,
-  meta,
-});
 </script>
 
 <style scoped>
-.lm-card-active {
-  color: var(--primary);
+
+.lm-card {
+  border-style: solid;
+  padding: 5px;
+  border-width: 1px;
+  border-radius: 5px;
+  margin-bottom: 5px;
 }
+.red {
+  color: #a83232;
+}
+
+.yellow {
+  color: #b3a136;
+}
+
+.orange {
+  color: #b36f36;
+}
+
+.purple {
+  color: #7a4b8d;
+}
+
+.green {
+  color: #4c7a4b;
+}
+
+.brown {
+  color: #6e5741;
+}
+
+.blue {
+  color: #3a5a8c;
+}
+
+.pink {
+  color: #a36985;
+}
+
+.gray {
+  color: #5a5a5a;
+}
+
+.black {
+  color: #333333;
+}
+
+.white {
+  color: #e6e6e6;
+}
+
+.orange {
+  color: orange;
+}
+
+.purple {
+  color: purple;
+}
+
+
+.update-card {
+  opacity: 0.5;
+  border-style: dashed;
+}
+
+.update-card.lm-card-active {
+  opacity: 1;
+}
+
+
 </style>

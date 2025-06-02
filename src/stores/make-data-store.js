@@ -115,7 +115,7 @@ export default function makeDataStore(name) {
                     value,
                     type: "put",
                 }));
-                
+
                 const currentDbData = await subLevel.db.iterator().all();
 
                 //look for deletes
@@ -129,7 +129,7 @@ export default function makeDataStore(name) {
 
                 await subLevel.db.batch(allData);
 
-                
+
 
                 const updatesData = Array.from(this.updates.entries())
                     .map(([key, value]) => ({
@@ -137,19 +137,19 @@ export default function makeDataStore(name) {
                         value,
                         type: "put",
                     }));
-                
+
                 // Get current updates data to check for deletes
                 const currentUpdatesData = await subLevel.updates.iterator().all();
-                
+
                 // Look for deletes in updates
                 const deleteUpdatesData = currentUpdatesData.filter(([key, value]) => !this.updates.has(key)).map(([key, value]) => ({
                     key,
                     value,
                     type: "del",
                 }));
-                
+
                 const allUpdatesData = [...updatesData, ...deleteUpdatesData];
-                
+
                 await subLevel.updates.batch(allUpdatesData);
 
                 const dbMeta = Object.entries(this.meta).map(([key, value]) => ({
@@ -183,9 +183,7 @@ export default function makeDataStore(name) {
 
                     //delete all updates after current index
                     for (const [key, update] of slicedUpdates) {
-                        if (update.type === "put" || update.type === "multiPut") {
-                            this.updates.delete(key);
-                        }
+                        this.updates.delete(key);
                     }
 
                     //update meta
@@ -201,7 +199,7 @@ export default function makeDataStore(name) {
                 const updateKey = `${ulid()}:${key}`;
 
                 //get the last update
-                const lastUpdate = this.updates.get(updateKey);
+                const lastUpdate = this.updates.get(this.meta.currentKey);
 
                 //format update
                 const update = {
@@ -223,11 +221,9 @@ export default function makeDataStore(name) {
                 if (this.meta.updates === this.meta.clearThreshold.increment) {
                     await this.bulkUpdates(this.updates);
                     this.meta.updates = this.meta.historySize;
-                    await this.saveDb();
-                    console.log("saved");
                 }
             },
-            async del(key) {
+            async del(key, value) {
 
                 console.log(key, "key");
 
@@ -242,6 +238,7 @@ export default function makeDataStore(name) {
                     type: "del",
                     last: lastUpdate,
                     target: key,
+                    value: { ...value },
                     action: "Delete user",
                     timestamp: Date.now(),
                 });
@@ -269,8 +266,6 @@ export default function makeDataStore(name) {
 
                 this.meta.currentKey = updateKey;
                 this.meta.updates++;
-
-                // await this.saveDb();
             },
             async multiDel(keys, action) {
 
@@ -382,6 +377,13 @@ export default function makeDataStore(name) {
                 }
             },
             clear() {
+                this.updates.clear();
+                this.db.clear();
+                this.meta.currentKey = "";
+                this.meta.updates = 0;
+            },
+            clearDb() {
+                persistentDb.clear();
                 this.updates.clear();
                 this.db.clear();
                 this.meta.currentKey = "";
