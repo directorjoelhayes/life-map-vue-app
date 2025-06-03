@@ -18,8 +18,10 @@
       height: `${props.height}px`,
     }"
   >
-    <div class="dashboard-item-content" :class="{ 'lock-content': lockContent }">
-      
+    <div
+      class="dashboard-item-content"
+      :class="{ 'lock-content': lockContent }"
+    >
       <slot name="default">
         {{ title }}
       </slot>
@@ -77,7 +79,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 const props = defineProps({
   title: {
     type: String,
@@ -115,10 +117,12 @@ const props = defineProps({
   },
 });
 
-const isSelected = computed(() => {
-  console.log("isSelected", props.selected, props.id);
-  return props.selected.includes(props.id);
-});
+const isSelected = ref(false);
+
+watch(() => props.selected, (newVal) => {
+  console.log(newVal, "newVal");
+  isSelected.value = newVal.includes(props.id);
+}, { immediate: true });
 
 const isInDragGroup = computed(() => {
   return props.dragGroup.includes(props.id);
@@ -153,7 +157,6 @@ const handlePointerDown = (event) => {
   initialX.value = props.x;
   initialY.value = props.y;
   event.target.setPointerCapture(event.pointerId);
-  
 };
 
 const handlePointerMove = (event) => {
@@ -163,14 +166,15 @@ const handlePointerMove = (event) => {
     (event.clientX - startX.value) ** 2 + (event.clientY - startY.value) ** 2
   );
   if (distance > 10) {
-    //if not selected, select the item
-    if (!isSelected.value) {
-      emit("update:select", event);
+    if (!isDragging.value) {
+      if (!isSelected.value) {
+        emit("update:select", event);
+      }
+      isDragging.value = true;
     }
-    isDragging.value = true;
   }
   if (!isDragging.value) return;
-  
+
   const deltaX = event.clientX - startX.value;
   const deltaY = event.clientY - startY.value;
   emit("update:position", {
@@ -187,7 +191,7 @@ const handlePointerUp = (event) => {
     isDragging.value = false;
 
     emit("update:dragEnd");
-    // emit("update:select", props.id);
+    emit("update:select", props.id);
   } else {
     // handle click
     emit("update:select", event);

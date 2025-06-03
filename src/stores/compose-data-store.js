@@ -28,7 +28,7 @@ export default function composeDataStore({
         //sliced updates
         const slicedUpdates = updatesArray.slice(0, currentIndex + 1);
 
-        console.log(slicedUpdates, "slicedUpdates", "tag");
+        // console.log(slicedUpdates, "slicedUpdates", "tag");
 
         //apply updates to cloned db
         for (const [key, update] of slicedUpdates) {
@@ -41,7 +41,6 @@ export default function composeDataStore({
             if (update.type === "multiPut") {
                
                 for (const [key, value] of update.updates) {
-                    console.log(key, value, "key, value", "composed");
                     clonedDb.set(key, value);
                 }
             }
@@ -67,7 +66,7 @@ export default function composeDataStore({
             // a shared variable for this specific action call
             const startTime = Date.now()
 
-            console.log(name, "name");
+            console.log(name, "name", "action");
             // this will trigger before an action on `store` is executed
             if (![
                 "put",
@@ -103,10 +102,6 @@ export default function composeDataStore({
                         toUpdate.set(update.target, update);
                     }
                 }
-
-                Array.from(toUpdate.entries()).forEach(([key, update]) => {
-                    console.log(update, "update");
-                });
 
 
                 const deletedItems = [];

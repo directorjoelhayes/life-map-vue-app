@@ -133,7 +133,7 @@ onBeforeMount(async () => {
     items.clear();
 
     savedItems.forEach((item) => {
-      items.set(item.id, item);
+      items.set(item.id, {...item});
     });
   } catch (error) {
     console.error("Error loading items", error);
@@ -362,10 +362,8 @@ const snapToGrid = (value) => {
 };
 
 const updateItemPosition = (id, position) => {
-  const item = items.get(id);
 
-  console.log(items, "items");
-  console.log(item, "item");
+  const item = items.get(id);
 
   if (item && selectedItems.value.length === 1) {
     // Single item selection - just move the item directly
@@ -565,7 +563,14 @@ const onResizeEnd = (id) => {
   }
 };
 
+const timesClicked = ref(0);
+
 const onItemClick = (id, { shiftKey, ctrlKey }) => {
+
+  timesClicked.value++;
+
+  console.log(timesClicked.value, "timesClicked");
+  
   const newSelectedItems = [...selectedItems.value];
   //if items exist and shift isn't being pressed
   if (
@@ -574,7 +579,6 @@ const onItemClick = (id, { shiftKey, ctrlKey }) => {
       return val !== id;
     })
   ) {
-    console.log("single select", id);
     newSelectedItems.splice(0, newSelectedItems.length, id);
     selectedItems.value = newSelectedItems;
     return;
