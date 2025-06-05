@@ -1,6 +1,6 @@
 <template>
   <div class="side-nav" :class="{ 'closed': !isOpen }">
-    <div class="side-nav-header" @click="isOpen = !isOpen">
+    <div class="side-nav-header" id="side-nav-header" @click="isOpen = !isOpen">
       <img :src="logoIcon" alt="logo" />
     </div>
     <div class="side-nav-content">
@@ -102,7 +102,7 @@ const isOpen = ref(false);
 }
 
 .side-nav-header {
-  padding: 10px 10px;
+    margin-bottom: 10px;
 }
 .side-nav-header img {
   width: 35px;

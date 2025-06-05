@@ -14,6 +14,11 @@ export default defineConfig({
     protocolImports: true,
   }),
   ],
+  server: {
+    port: process.env.VITE_PORT || 3014,
+    strictPort: true,
+    host: true
+  },
   resolve: {
     alias: {
       // Ensure 'events' is resolved to the browser-compatible version

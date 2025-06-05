@@ -92,11 +92,15 @@ export default function composeDataStore({
 
                 //only keep last update 
                 for (const [key, update] of store.updates.entries()) {
-                    if(update.type === "multiPut"
-                        || update.type === "multiDel"
+                    if(update.type === "multiPut" 
                     ) {
                         for (const [key, value] of update.updates) {
                             toUpdate.set(key, {...value, target: key});
+                        }
+
+                    } else if(update.type === "multiDel") {
+                        for (const key of update.keys) {
+                            toUpdate.set(key, {target: key});
                         }
                     } else {
                         toUpdate.set(update.target, update);

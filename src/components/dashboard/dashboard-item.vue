@@ -1,6 +1,7 @@
 <template>
   <div
     class="dashboard-item"
+    :id="id"
     @click="handleClick"
     @pointerdown="handlePointerDown"
     @pointermove="handlePointerMove"
@@ -10,20 +11,27 @@
       'is-dragging': isDragging || isInDragGroup,
       'debug-handle': debugHandle,
       selected: isSelected,
+      widget: widget,
     }"
     :style="{
       left: `${props.x}px`,
       top: `${props.y}px`,
       width: `${props.width}px`,
       height: `${props.height}px`,
+      anchorName: `--item-${id}`,
     }"
   >
     <div
       class="dashboard-item-content"
-      :class="{ 'lock-content': lockContent }"
+      @click="stopPropagation"
+      @pointerdown="stopPropagation"
+      @pointermove="stopPropagation"
+      @pointerup="stopPropagation"
+      @pointercancel="stopPropagation"
+      :class="{ 'lock-content': lockContent, 'widget': widget }"
     >
-      <slot name="default">
-        {{ title }}
+      <slot name="default" :lockContent="lockContent">
+
       </slot>
     </div>
 
@@ -79,7 +87,8 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from "vue";
+import SearchBox from "../search-box/search-box.vue";
+import { ref, computed, watch, reactive } from "vue";
 const props = defineProps({
   title: {
     type: String,
@@ -115,14 +124,53 @@ const props = defineProps({
     type: Array,
     default: [],
   },
+  widget: {
+    type: String,
+    default: "",
+  },
 });
 
 const isSelected = ref(false);
+const isDragging = ref(false);
+const isResizing = ref(false);
+const startX = ref(0);
+const startY = ref(0);
+const initialX = ref(0);
+const initialY = ref(0);
+const initialWidth = ref(0);
+const initialHeight = ref(0);
+const debugHandle = ref(false);
+const pointerDown = ref(false);
+const lockContent = ref(true);
 
-watch(() => props.selected, (newVal) => {
-  console.log(newVal, "newVal");
-  isSelected.value = newVal.includes(props.id);
-}, { immediate: true });
+watch(
+  () => props.selected,
+  (newVal) => {
+    isSelected.value = newVal.includes(props.id);
+    if(!isSelected.value) {
+      lockContent.value = true;
+    }
+  },
+  { immediate: true }
+);
+
+
+
+const menus = reactive({
+  search: false,
+  menu: false,
+})
+
+defineExpose({
+  openMenu: (menu, value) => {
+    menus[menu] = value;
+  },
+  closeMenu: (menu) => {
+    menus[menu] = false;
+  }
+})
+
+
 
 const isInDragGroup = computed(() => {
   return props.dragGroup.includes(props.id);
@@ -136,21 +184,11 @@ const emit = defineEmits([
   "update:select",
 ]);
 
-const isDragging = ref(false);
-const isResizing = ref(false);
-const startX = ref(0);
-const startY = ref(0);
-const initialX = ref(0);
-const initialY = ref(0);
-const initialWidth = ref(0);
-const initialHeight = ref(0);
-const debugHandle = ref(false);
-const pointerDown = ref(false);
 
-const lockContent = ref(true);
 
 const handlePointerDown = (event) => {
   event.preventDefault();
+  event.stopPropagation();
   pointerDown.value = true;
   startX.value = event.clientX;
   startY.value = event.clientY;
@@ -160,6 +198,7 @@ const handlePointerDown = (event) => {
 };
 
 const handlePointerMove = (event) => {
+  event.stopPropagation();
   if (!pointerDown.value) return;
   event.preventDefault();
   const distance = Math.sqrt(
@@ -184,6 +223,7 @@ const handlePointerMove = (event) => {
 };
 
 const handlePointerUp = (event) => {
+  event.stopPropagation();
   if (isDragging.value) {
     if (event.pointerId !== undefined) {
       event.target.releasePointerCapture(event.pointerId);
@@ -191,10 +231,15 @@ const handlePointerUp = (event) => {
     isDragging.value = false;
 
     emit("update:dragEnd");
+
     emit("update:select", props.id);
   } else {
     // handle click
-    emit("update:select", event);
+    if(isSelected.value) {
+      lockContent.value = false;
+    } else {
+      emit("update:select", event);
+    }
   }
 
   pointerDown.value = false;
@@ -235,25 +280,10 @@ const handleResizePointerUp = (event) => {
   emit("update:resize-end");
 };
 
-const selectItemsInBox = () => {
-  const box = selectionDragBox.value;
-  const newSelectedItems = [];
-
-  // Iterate through Map entries to check each item
-  for (const [key, item] of items) {
-    // Check if item overlaps with selection box
-    if (
-      item.x < box.x + box.width &&
-      item.x + item.width > box.x &&
-      item.y < box.y + box.height &&
-      item.y + item.height > box.y
-    ) {
-      newSelectedItems.push(key);
-    }
-  }
-
-  selectedItems.value = newSelectedItems;
+const stopPropagation = (event) => {
+  event.stopPropagation();
 };
+
 </script>
 
 <style scoped>
@@ -285,6 +315,19 @@ const selectItemsInBox = () => {
 
 .dashboard-item {
   background: var(--surface-500);
+  overflow: hidden;
+}
+
+.dashboard-item.widget {
+    border-style: solid;
+    border-width: 1px;
+    border-color: var(--surface-300);
+}
+
+
+.dashboard-item-content.widget {
+  width: 100%;
+  height: 100%;
 }
 
 .dashboard-item.selected {

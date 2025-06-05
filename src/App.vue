@@ -16,7 +16,6 @@ applyTheme("dark");
 <style>
 div#app {
   position: relative;
-  background: #ffffff30;
   width: 100vw;
   height: 100vh;
   overflow: hidden;
@@ -37,12 +36,28 @@ h1 {
   border-left: solid;
   border-width: 1px;
   border-color: var(--surface);
-  background: var(--background);
+  background: var(--background-600);
   overflow: scroll;
   scroll-behavior: smooth;
   overscroll-behavior: auto;
   -webkit-overflow-scrolling: touch; /* For iOS devices */
 }
+#side-nav-header {
+  anchor-name: --nav_anchor_1;
+}
+.lm-container.fluid.dashboard-header {
+    position: absolute;
+}
+.dashboard-header h1 {
+    margin: 0px;
+}
+.dashboard-header {
+  position-anchor: --nav_anchor_1;
+  top: anchor(center);
+  transform: translateY(-50%);
+}
+
+
 </style>
 
 <style scoped>

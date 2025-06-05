@@ -2,9 +2,6 @@ import { defineStore } from "pinia";
 import { ulid } from "ulid";
 import { BrowserLevel } from "browser-level";
 
-// console.log(BrowserLevel, "browser level");
-
-
 export default function makeDataStore(name) {
 
     const persistentDb = new BrowserLevel(name, { valueEncoding: "json" });
@@ -141,12 +138,17 @@ export default function makeDataStore(name) {
                 // Get current updates data to check for deletes
                 const currentUpdatesData = await subLevel.updates.iterator().all();
 
+                console.log(currentUpdatesData, "currentUpdatesData");
+
+
                 // Look for deletes in updates
                 const deleteUpdatesData = currentUpdatesData.filter(([key, value]) => !this.updates.has(key)).map(([key, value]) => ({
                     key,
                     value,
                     type: "del",
                 }));
+
+                console.log(deleteUpdatesData, "deleteUpdatesData");
 
                 const allUpdatesData = [...updatesData, ...deleteUpdatesData];
 
@@ -194,18 +196,18 @@ export default function makeDataStore(name) {
             },
             async put(key, value) {
 
-                await this.treeCheck();
+                this.treeCheck();
 
                 const updateKey = `${ulid()}:${key}`;
 
                 //get the last update
-                const lastUpdate = this.updates.get(this.meta.currentKey);
+                // const lastUpdate = this.updates.get(this.meta.currentKey);
 
                 //format update
                 const update = {
                     id: updateKey,
                     //helps keep chain of updates if distributed
-                    last: lastUpdate,
+                    last: this.updates.get(this.meta.currentKey),
                     target: key,
                     type: "put",
                     action: "Update user",
@@ -219,7 +221,7 @@ export default function makeDataStore(name) {
                 this.meta.updates++;
 
                 if (this.meta.updates === this.meta.clearThreshold.increment) {
-                    await this.bulkUpdates(this.updates);
+                    this.bulkUpdates(this.updates);
                     this.meta.updates = this.meta.historySize;
                 }
             },
@@ -246,7 +248,10 @@ export default function makeDataStore(name) {
                 this.meta.currentKey = updateKey;
                 this.meta.updates++;
 
-                // await this.saveDb();
+                if (this.meta.updates === this.meta.clearThreshold.increment) {
+                    this.bulkUpdates(this.updates);
+                    this.meta.updates = this.meta.historySize;
+                }
             },
             async multiPut(updates, action) {
 
@@ -254,7 +259,8 @@ export default function makeDataStore(name) {
 
                 const updateKey = `${ulid()}:multiPut`;
 
-                const lastUpdate = this.updates.get(this.meta.currentKey);
+                const lastUpdate = this.meta.currentKey;
+
                 this.updates.set(updateKey, {
                     type: "multiPut",
                     updates: updates,
@@ -266,13 +272,18 @@ export default function makeDataStore(name) {
 
                 this.meta.currentKey = updateKey;
                 this.meta.updates++;
+
+                if (this.meta.updates === this.meta.clearThreshold.increment) {
+                    this.bulkUpdates(this.updates);
+                    this.meta.updates = this.meta.historySize;
+                }
             },
             async multiDel(keys, action) {
 
                 this.treeCheck();
 
                 const updateKey = `${ulid()}:multiDel`;
-                const lastUpdate = this.updates.get(this.meta.currentKey);
+                const lastUpdate = this.meta.currentKey;
                 this.updates.set(updateKey, {
                     type: "multiDel",
                     keys: keys,
@@ -284,6 +295,11 @@ export default function makeDataStore(name) {
 
                 this.meta.currentKey = updateKey;
                 this.meta.updates++;
+
+                if (this.meta.updates === this.meta.clearThreshold.increment) {
+                    this.bulkUpdates(this.updates);
+                    this.meta.updates = this.meta.historySize;
+                }
 
                 // await this.saveDb();
             },
