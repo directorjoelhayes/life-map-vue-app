@@ -9,15 +9,17 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tweenjs/tween.js": "^25.0.0",
     "axios": "^1.9.0",
     "browser-level": "^3.0.0",
     "chroma-js": "^3.1.2",
     "fuzzy-search": "^3.2.1",
     "pinia": "^3.0.2",
-    "ulid": "^3.0.0",
+    "ulid": "^3.0.1",
     "vue": "^3.5.13",
     "vue-grid-layout": "^2.4.0",
-    "vue-router": "^4.5.1"
+    "vue-router": "^4.5.1",
+    "vue-view-transitions": "^1.2.1"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.2.3",

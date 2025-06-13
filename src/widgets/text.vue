@@ -1,6 +1,6 @@
 <template>
   <div class="text-widget">
-    <div class="text-toolbar">
+    <div class="text-toolbar" v-show="!lockContent">
       <button @click="formatText('bold')" :class="{ active: isFormatActive('bold') }">
         <span class="material-symbols-outlined">format_bold</span>
       </button>
@@ -128,7 +128,7 @@ defineExpose({
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: var(--surface-600);
+  background: var(--surface-500);
   border-radius: 10px;
   overflow: hidden;
 }

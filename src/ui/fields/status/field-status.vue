@@ -81,6 +81,8 @@ const getIconByStatus = (type) => {
       return ErrorIcon;
     case "caution":
       return CautionIcon;
+    case "info":
+      return CautionIcon;
     default:
       return null;
   }
@@ -94,8 +96,10 @@ const getColorByStatus = (type) => {
       return "#ef4444"; // Red
     case "caution":
       return "#f59e0b"; // Amber/Yellow
+    case "info":
+      return "var(--primary-500)";
     default:
-      return "#60a5fa"; // Blue for info
+      return "var(--primary-500)";
   }
 };
 </script>

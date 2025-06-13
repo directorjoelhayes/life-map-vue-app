@@ -8,21 +8,62 @@ import Home from './pages/home/home.vue'
 import About from './pages/about/about.vue'
 import HistoryDatabaseTest from './components/history-database-test/history-database.vue'
 import Settings from './pages/settings/settings.vue'
+import Apps from './pages/apps/apps.vue'
+import { ViewTransitionsPlugin, startViewTransition } from 'vue-view-transitions'
+import AppSingle from './pages/apps/app-single.vue'
+import AppOverview from './pages/apps/tabs/app-overview.vue'
+import AppHistory from './pages/apps/tabs/app-history.vue'
+import AppSettings from './pages/apps/tabs/app-settings.vue'
+import Search from './pages/search/search.vue'
+import InfiniteCanvas from './pages/infinite-canvas/infinite-canvas.vue'
+
 
 const router = createRouter({   
   history: createWebHistory(),
   routes: [
     { path: '/', component: Home },
     { path: '/about', component: About },
+    { path: '/apps', component: Apps },
+    { path: '/infinite-canvas', component: InfiniteCanvas },
     { path: '/history-database-test', component: HistoryDatabaseTest },
     { path: '/settings', component: Settings },
+    { 
+      path: '/apps/:id', 
+      component: AppSingle,
+      children: [
+        { path: '', redirect: 'overview' },
+        { path: 'overview', component: AppOverview },
+        { path: 'history', component: AppHistory },
+        { path: 'settings', component: AppSettings }
+      ]
+    },
+    { path: '/search', component: Search },
   ],
+})
+
+// Set up view transitions for router navigation
+router.beforeResolve(async (to, from) => {
+  // Only apply view transitions if the browser supports it
+  if (!document.startViewTransition) {
+    return
+  }
+
+  const viewTransition = startViewTransition(async () => {
+    // The actual route change will happen here
+    await new Promise(resolve => {
+      // Give router time to update
+      setTimeout(resolve, 0)
+    })
+  })
+  
+  await viewTransition.captured
 })
 
 const pinia = createPinia()
 
 // Create app and use router before mounting
 const app = createApp(App)
+app.use(ViewTransitionsPlugin())
 app.use(router)
 app.use(pinia)
 app.mount('#app')

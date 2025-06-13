@@ -7,12 +7,17 @@
     @pointermove="handlePointerMove"
     @pointerup="handlePointerUp"
     @pointercancel="handlePointerUp"
-    :class="{
-      'is-dragging': isDragging || isInDragGroup,
-      'debug-handle': debugHandle,
-      selected: isSelected,
-      widget: widget,
-    }"
+    :class="[
+      {
+        'is-dragging': isDragging || isInDragGroup,
+        'debug-handle': debugHandle,
+        selected: isSelected,
+        widget: widget,
+      },
+      componentInfo.flat ? 'flat' : '',
+      componentInfo.transparent ? 'transparent' : '',
+      componentInfo.border ? 'border' : '',
+    ]"
     :style="{
       left: `${props.x}px`,
       top: `${props.y}px`,
@@ -28,11 +33,9 @@
       @pointermove="stopPropagation"
       @pointerup="stopPropagation"
       @pointercancel="stopPropagation"
-      :class="{ 'lock-content': lockContent, 'widget': widget }"
+      :class="{ 'lock-content': lockContent, widget: widget }"
     >
-      <slot name="default" :lockContent="lockContent">
-
-      </slot>
+      <slot name="default" :lockContent="lockContent"> </slot>
     </div>
 
     <div
@@ -88,7 +91,7 @@
 
 <script setup>
 import SearchBox from "../search-box/search-box.vue";
-import { ref, computed, watch, reactive } from "vue";
+import { ref, computed, watch, reactive, onMounted } from "vue";
 const props = defineProps({
   title: {
     type: String,
@@ -128,6 +131,10 @@ const props = defineProps({
     type: String,
     default: "",
   },
+  componentInfo: {
+    type: Object,
+    default: {},
+  },
 });
 
 const isSelected = ref(false);
@@ -143,23 +150,27 @@ const debugHandle = ref(false);
 const pointerDown = ref(false);
 const lockContent = ref(true);
 
+onMounted(() => {
+  console.log("Props:", props);
+  console.log("item.widget:" /* you'll need to pass this as a prop */);
+  console.log("componentInfo:", props.componentInfo);
+});
+
 watch(
   () => props.selected,
   (newVal) => {
     isSelected.value = newVal.includes(props.id);
-    if(!isSelected.value) {
+    if (!isSelected.value) {
       lockContent.value = true;
     }
   },
   { immediate: true }
 );
 
-
-
 const menus = reactive({
   search: false,
   menu: false,
-})
+});
 
 defineExpose({
   openMenu: (menu, value) => {
@@ -167,10 +178,8 @@ defineExpose({
   },
   closeMenu: (menu) => {
     menus[menu] = false;
-  }
-})
-
-
+  },
+});
 
 const isInDragGroup = computed(() => {
   return props.dragGroup.includes(props.id);
@@ -183,8 +192,6 @@ const emit = defineEmits([
   "update:resize-end",
   "update:select",
 ]);
-
-
 
 const handlePointerDown = (event) => {
   event.preventDefault();
@@ -235,7 +242,7 @@ const handlePointerUp = (event) => {
     emit("update:select", props.id);
   } else {
     // handle click
-    if(isSelected.value) {
+    if (isSelected.value) {
       lockContent.value = false;
     } else {
       emit("update:select", event);
@@ -283,7 +290,6 @@ const handleResizePointerUp = (event) => {
 const stopPropagation = (event) => {
   event.stopPropagation();
 };
-
 </script>
 
 <style scoped>
@@ -318,12 +324,11 @@ const stopPropagation = (event) => {
   overflow: hidden;
 }
 
-.dashboard-item.widget {
-    border-style: solid;
-    border-width: 1px;
-    border-color: var(--surface-300);
+.dashboard-item.border {
+  border-style: solid;
+  border-width: 1px;
+  border-color: var(--surface-300);
 }
-
 
 .dashboard-item-content.widget {
   width: 100%;

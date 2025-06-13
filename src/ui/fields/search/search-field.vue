@@ -11,6 +11,7 @@
       <SpinnerIcon v-else :size="20" color="#ffffff" class="icon" />
       <kbd v-if="shortCodeMatch">{{ shortCodeMatch.shortCode }}</kbd>
     </div>
+    
     <field-status :statuses="statuses" />
   </div>
 </template>
@@ -69,7 +70,9 @@ const shortCodeMatch = ref(null);
 
 const validate = ref(false);
 
-const statuses = ref([]);
+const statuses = defineModel('statuses', { default: () => [] });
+
+
 
 const handleSearch = () => {
   console.log(query.value, "query");

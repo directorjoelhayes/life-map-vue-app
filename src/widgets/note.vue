@@ -1,6 +1,6 @@
 <template>
   <div class="note-widget" >
-    <div class="note-header">
+    <div class="note-header" v-show="!lockContent">
       <span class="material-symbols-outlined note-icon">note</span>
       <h3 class="note-title">Note</h3>
     </div>
@@ -73,7 +73,7 @@ defineExpose({
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: var(--surface-600);
+  background: var(--surface-500);
   border-radius: 10px;
   overflow: hidden;
 }

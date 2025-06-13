@@ -1,0 +1,418 @@
+[
+    {
+        "title": "Chat GPT prompt",
+        "description": "Ask GPT anything",
+        "categories": [
+            "prompt",
+            "AI"
+        ],
+        "icon": "robot_2",
+        "tags": [
+            "AI",
+            "prompt",
+            "how",
+            "I want",
+            "chat"
+        ],
+        "actions": [
+            {
+                "openPage": "https://chatgpt.com"
+            }
+        ],
+        "shortCode": "cc"
+    },
+    {
+        "title": "Test Action",
+        "description": "Test server sent events",
+        "categories": [
+            "test",
+            "action"
+        ],
+        "actions": [
+            {
+                "testAction": "testAction"
+            }
+        ],
+        "shortCode": "ta"
+    },
+    {
+        "title": "File Explorer",
+        "description": "Explore the file system",
+        "categories": [
+            "file",
+            "explorer"
+        ],
+        "actions": [
+            {
+                "browseTo": "file-explorer.html"
+            }
+        ],
+        "shortCode": "fe"
+    },
+    {
+        "title": "Encrypted Folder",
+        "description": "Encrypted folder",
+        "categories": [
+            "file",
+            "explorer"
+        ],
+        "actions": [
+            {
+                "browseTo": "encrypted-folder.html"
+            }
+        ],
+        "shortCode": "ef"
+    },
+    {
+        "title": "Youtube Chrome Extension test",
+        "description": "Test the iframe",
+        "categories": [
+            "file",
+            "explorer"
+        ],
+        "actions": [
+            {
+                "openPageInBackground": "https://www.youtube.com/watch?v=So1h1rNp9-k#setVolume=10"
+            }
+        ],
+        "shortCode": "it"
+    },
+    {
+        "title": "Spanish Dictionary",
+        "description": "Search for a word or words.",
+        "categories": [
+            "search",
+            "language"
+        ],
+        "tags": [
+            "language",
+            "spanish",
+            "dictionary",
+            "translate"
+        ],
+        "actions": [
+            {
+                "mountComponent": "spanish.html"
+            }
+        ],
+        "shortCode": "di"
+    },
+    {
+        "title": "Memory Palaces",
+        "description": "Memory palace index, google sheet",
+        "tags": [
+            "memory",
+            "palaces",
+            "spanish",
+            "index",
+            "sheets"
+        ],
+        "actions": [
+            {
+                "openPage": "https://docs.google.com/spreadsheets/d/1olyYBQrilxyVkPQmOek8oQQTKLnqdV1Cipl9uYD8PJY/edit?gid=1221189700#gid=1221189700"
+            }
+        ],
+        "shortCode": "mm"
+    },
+    {
+        "title": "New Note",
+        "description": "Create a new note",
+        "tags": [
+            "notes",
+            "note",
+            "thought"
+        ],
+        "actions": [
+            {
+                "openPage": "http://localhost:3006/notes#new"
+            }
+        ],
+        "shortCode": "nn"
+    },
+    {
+        "title": "Notes",
+        "description": "Open up notes, turn to search later",
+        "tags": [
+            "notes",
+            "note",
+            "thought"
+        ],
+        "actions": [
+            {
+                "openPage": "http://localhost:3006/notes"
+            }
+        ],
+        "shortCode": "ns"
+    },
+    {
+        "title": "Google Translate",
+        "description": "English to Spanish",
+        "tags": [
+            "translate",
+            "spanish",
+            "english to Spanish",
+            "language"
+        ],
+        "actions": [
+            {
+                "openPage": "https://translate.google.com/?sl=en&tl=es&op=translate"
+            }
+        ]
+    },
+    {
+        "title": "Google Translate",
+        "description": "Spanish to English",
+        "tags": [
+            "translate",
+            "spanish",
+            "Spanish to English",
+            "language"
+        ],
+        "actions": [
+            {
+                "openPage": "https://translate.google.com/?sl=es&tl=en&op=translate"
+            }
+        ]
+    },
+    {
+        "title": "Youtube Music",
+        "description": "Youtube Music",
+        "shortCode": "mu",
+        "categories": [
+            "video",
+            "youtube",
+            "music"
+        ],
+        "tags": [
+            "music",
+            "youtube",
+            "music",
+            "youtube music"
+        ],
+        "actions": [
+            {
+                "openPage": "https://music.youtube.com/"
+            }
+        ]
+    },
+    {
+        "title": "Youna Music Playlist",
+        "description": "Youtube music playlist",
+        "shortCode": "yna",
+        "categories": [
+            "video",
+            "youtube"
+        ],
+        "tags": [
+            "youtube",
+            "music",
+            "youtube music",
+            "yuna",
+            "intense music",
+            "techno"
+        ],
+        "actions": [
+            {
+                "openPage": "https://music.youtube.com/watch?v=36PGO3glS6Y&list=RDAMVM36PGO3glS6Y"
+            }
+        ]
+    },
+    {
+        "title": "Advanced Wim Hof Method | 4 rounds 40 breaths",
+        "description": "4 rounds 40 breaths, no music",
+        "categories": [
+            "video",
+            "youtube"
+        ],
+        "tags": [
+            "breathing",
+            "wim hof",
+            "breath work",
+            "wim",
+            "hof",
+            "advances"
+        ],
+        "actions": [
+            {
+                "openPage": "https://www.youtube.com/watch?v=bZH7GG8hZGo&list=PLDRaH5UQbGzBNq1uYTNQvWAE-p9vSSGvB"
+            }
+        ]
+    },
+    {
+        "title": "Meditation Music",
+        "description": "Deep meditative music playlist on YouTube",
+        "categories": [
+            "youtube",
+            "music",
+            "playlist"
+        ],
+        "tags": [
+            "meditate",
+            "music",
+            "meditative",
+            "atmospheric",
+            "focus",
+            "relax"
+        ],
+        "actions": [
+            {
+                "openPage": "https://www.youtube.com/watch?v=E3AiyCCumBs&list=PLDRaH5UQbGzBRXPp_vLgtdajuAsQbdoV3"
+            }
+        ]
+    },
+    {
+        "title": "Focus - Relax Music",
+        "description": "Relaxing moderate tempo music to focus to",
+        "categories": [
+            "youtube",
+            "music",
+            "playlist"
+        ],
+        "tags": [
+            "relax",
+            "work",
+            "deep work",
+            "focus",
+            "relax"
+        ],
+        "actions": [
+            {
+                "openPage": "https://www.youtube.com/watch?v=x9Vl8vWyZNE&list=PLDRaH5UQbGzD3LJJomOH1UBOOnljCKxLB"
+            }
+        ]
+    },
+    {
+        "title": "Upbeat Work Music",
+        "description": "Ready to get shit done? This is the mix. Chill, but with beats",
+        "categories": [
+            "youtube",
+            "music",
+            "playlist"
+        ],
+        "tags": [
+            "focus",
+            "work",
+            "upbeat",
+            "limitless",
+            "productivity"
+        ],
+        "actions": [
+            {
+                "openPage": "https://www.youtube.com/watch?v=4MFOBeUCPkw"
+            }
+        ]
+    },
+    
+    {
+        "title": "Spanish Vocabulary",
+        "description": "Spanish Vocabulary List",
+        "categories": [
+            "learning",
+            "language"
+        ],
+        "tags": [
+            "spanish",
+            "vocabulary",
+            "language",
+            "spanish vocabulary",
+            "spanish words"
+        ],
+        "shortCode": "vo",
+        "actions": [
+            {
+                "openPage": "http://localhost:3010/saved-vocab"
+            }
+        ]
+    },
+    {
+        "title": "New Project (dev)",
+        "description": "Create a new development project",
+        "icon": "desktop_windows",
+        "shortCode": "np",
+        "actions": [
+            {
+                "browseTo": "new-project.html"
+            }
+        ]
+    },
+    {
+        "title": "View Projects (dev)",
+        "description": "View all development projects",
+        "icon": "folder_open",
+        "shortCode": "pp",
+        "actions": [
+            {
+                "mountComponent": "http://localhost:3006/notes#new"
+            }
+        ]
+    },
+    {
+        "title": "Start Trading App",
+        "shortCode": "tr",
+        "icon": "monitoring",
+        "description": "Start the trading app",
+        "tags": [
+            "trading",
+            "app",
+            "mindful trading",
+            "trading app",
+            "mom's trading app"
+        ],
+        "actions": [
+            {
+                "executeCommandInTerminal": "cd D:\\AppDev\\1. mindful-trading\\v2\\frontend && npm run dev"
+            },
+            {
+                "executeCommandInTerminal": "cd D:\\AppDev\\1. mindful-trading\\v2-backend && npm run dev"
+            },
+            {
+                "executeCommand": "cd D:\\AppDev\\1. mindful-trading\\v2\\frontend && cursor ."
+            },
+            {
+                "executeCommand": "cd D:\\AppDev\\1. mindful-trading\\v2-backend && cursor ."
+            }
+        ],
+        "openPage": "http://localhost:3000"
+    },
+    {
+        "title": "Edit Electron App",
+        "shortCode": "ea",
+        "description": "Edit the electron app in cursor",
+        "tags": [
+            "edit",
+            "electron",
+            "app",
+            "life map"
+        ],
+        "actions": [
+            {
+                "executeCommand": "cd D:\\AppDev\\2. Life Map\\electron\\electron-app && cursor ."
+            }
+        ]
+    },
+    {
+        "title": "Math Calculus",
+        "shortCode": "ma",
+        "actions": [
+            {
+                "openPage": "https://www.notion.so/Calculus-Integrals-352cb06f2b66401b8ba8f3518cdba324?showMoveTo=true&saveParent=true"
+            },
+            {
+                "openPage": "https://www.khanacademy.org/math/ap-calculus-ab/ab-integration-new/ab-6-3/a/review-summation-notation"
+            },
+            {
+                "openPage": "https://byjus.com/maths/math-symbols/"
+            }
+        ]
+    },
+    {
+        "title": "Restart Electron Server",
+        "description": "Kill existing process and restart the app",
+        "shortCode": "res",
+        "actions": [
+            {
+                "executeCommandInTerminal": "taskkill /F /IM electron.exe && cd D:\\AppDev\\2. Life Map\\electron\\electron-app && npm run start"
+            }
+        ]
+    }
+]

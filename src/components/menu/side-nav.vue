@@ -8,9 +8,13 @@
         <span class="material-symbols-outlined">home</span>
         <span class="text">Home</span>
       </router-link>
-      <router-link to="/about">
-        <span class="material-symbols-outlined">chat_info</span>
-        <span class="text">About</span>
+      <router-link to="/apps">
+        <span class="material-symbols-outlined">apps</span>
+        <span class="text">Apps</span>
+      </router-link>
+      <router-link to="/infinite-canvas">
+        <span class="material-symbols-outlined">draw</span>
+        <span class="text">Infinite Canvas</span>
       </router-link>
       <router-link to="/settings">
         <span class="material-symbols-outlined">settings</span>
@@ -18,7 +22,7 @@
       </router-link>
       <router-link to="/history-database-test">
         <span class="material-symbols-outlined">chat_info</span>
-        <span class="text">History Database Test</span>
+        <span class="text">History Test</span>
       </router-link>
     </div>
   </div>
