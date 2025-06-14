@@ -164,6 +164,19 @@ h2 {
 </style>
 
 <style scoped>
+
+
+:root {
+  color: #fff;
+  --on-background: #fff;
+  --background-700: #121212;
+  --background-600: #1e1e1e;
+  --background-500: #2e2e2e;
+  --background-400: #3e3e3e;
+  --background-300: #4e4e4e;
+  --background-200: #5e5e5e;
+}
+
 body {
   background-color: var(--background-700);
   color: var(--on-background);

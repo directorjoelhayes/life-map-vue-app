@@ -14,6 +14,7 @@
     "browser-level": "^3.0.0",
     "chroma-js": "^3.1.2",
     "fuzzy-search": "^3.2.1",
+    "libp2p": "^2.8.9",
     "pinia": "^3.0.2",
     "ulid": "^3.0.1",
     "vue": "^3.5.13",
