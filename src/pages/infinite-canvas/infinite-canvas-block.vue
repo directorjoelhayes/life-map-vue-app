@@ -4,13 +4,14 @@
     @pointerdown="down"
     @pointermove="move"
     @pointerup="up"
+    :class="{ selected: selectable.isSelected(block.id) }"
     :style="{
       width: `${block.width}px`,
       height: `${block.height}px`,
       transform: `translate(${x}px, ${y}px)`,
     }"
   >
-    <div class="infinite-canvas-block__header">
+    <div class="infinite-canvas-content">
       <h2>{{ block.name }}</h2>
     </div>
   </div>
@@ -19,6 +20,9 @@
 <script setup>
 import { ref } from "vue";
 import buildPointerEvents from "./composables/build-pointer-events";
+import buildSelectable from "./composables/build-selectable";
+
+const selectable = buildSelectable("infinite-canvas")
 
 const props = defineProps({
   block: {
@@ -47,12 +51,15 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["select", "dragStart", "dragMove", "dragEnd"]);
+  const emit = defineEmits(["click", "dragStart", "dragMove", "dragEnd"]);
 
 const { event, down, move, up } = buildPointerEvents({
   stopPropagation: true,
   onPointerDown: (e, event) => {
     console.log("pointer down", e, event);
+    if (!selectable.isSelected(props.block.id)) {
+      emit("update:click", e);
+    }
   },
   onDragStart: (e, event) => {
     console.log("drag start", e, event);
@@ -81,7 +88,9 @@ const { event, down, move, up } = buildPointerEvents({
     }
   },
   onClick: (e, event) => {
-    console.log("click", e, event);
+    if (selectable.isSelected(props.block.id)) {
+      //focus on the block
+    }
   },
 });
 </script>
@@ -93,6 +102,11 @@ const { event, down, move, up } = buildPointerEvents({
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.infinite-canvas-content {
+  pointer-events: none;
+  user-select: none;
 }
 
 .infinite-canvas-block:hover,

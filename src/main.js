@@ -16,6 +16,14 @@ import AppHistory from './pages/apps/tabs/app-history.vue'
 import AppSettings from './pages/apps/tabs/app-settings.vue'
 import Search from './pages/search/search.vue'
 import InfiniteCanvas from './pages/infinite-canvas/infinite-canvas.vue'
+import Table from './pages/table/table.vue'
+import VueVirtualScroller from 'vue-virtual-scroller'
+
+// Global component imports
+import LmCard from './components/cards/card.vue'
+import LmContainer from './components/container/lm-container.vue'
+import Row from './components/container/row.vue'
+import Col from './components/container/col.vue'
 
 
 const router = createRouter({   
@@ -27,6 +35,7 @@ const router = createRouter({
     { path: '/infinite-canvas', component: InfiniteCanvas },
     { path: '/history-database-test', component: HistoryDatabaseTest },
     { path: '/settings', component: Settings },
+    { path: '/table', component: Table },
     { 
       path: '/apps/:id', 
       component: AppSingle,
@@ -63,6 +72,15 @@ const pinia = createPinia()
 
 // Create app and use router before mounting
 const app = createApp(App)
+
+app.use(VueVirtualScroller)
+
+// Register global components
+app.component('LmCard', LmCard)
+app.component('LmContainer', LmContainer)
+app.component('Row', Row)
+app.component('Col', Col)
+
 app.use(ViewTransitionsPlugin())
 app.use(router)
 app.use(pinia)

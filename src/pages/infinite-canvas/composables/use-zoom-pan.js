@@ -279,8 +279,6 @@ export default function buildZoomPan(container, containerContents, {
         update()
     }
 
-
-
     const ctx = {
         matrix,
         translate,
@@ -310,9 +308,7 @@ export default function buildZoomPan(container, containerContents, {
             ],
         },
         events(e) {
-
             down(e)
-
             return {
                 "pointermove": (e) => {
                     move(e);

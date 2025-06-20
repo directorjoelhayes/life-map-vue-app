@@ -20,6 +20,10 @@
         <span class="material-symbols-outlined">settings</span>
         <span class="text">Settings</span>
       </router-link>
+      <router-link to="/table">
+        <span class="material-symbols-outlined">table_chart</span>
+        <span class="text">Table</span>
+      </router-link>
       <router-link to="/history-database-test">
         <span class="material-symbols-outlined">chat_info</span>
         <span class="text">History Test</span>
