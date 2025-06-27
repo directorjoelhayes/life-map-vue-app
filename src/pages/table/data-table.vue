@@ -1,9 +1,7 @@
 <template>
   <div class="table" :style="tableGridStyle">
     <div class="header">
-      <div class="checkbox cell" v-if="selectable">
-        
-      </div>
+      <div class="checkbox cell" v-if="selectable"></div>
       <div
         v-for="(header, index) in headers"
         :key="'header-' + index"
@@ -14,7 +12,7 @@
     </div>
     <RowHandler
       v-for="(row, rowIndex) in rows"
-      :key="'row-' + rowIndex"
+      :key="row[idKey]"
       :item="row"
       :headers="headers"
     >
@@ -38,8 +36,9 @@
 </template>
   
 <script setup>
-import { computed } from "vue";
+import { computed, onMounted, ref, nextTick, onUnmounted } from "vue";
 import RowHandler from "./row-handler.vue";
+import { useTableStore } from "./table-store";
 
 const props = defineProps({
   headers: {
@@ -54,33 +53,70 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
+  id: {
+    type: String,
+    default: "default",
+  },
+  idKey: {
+    type: String,
+    default: "id",
+  },
 });
 
-function randomDataTest(col) {
-  return Array.from({ length: 4 }, (_, index) => ({
-    price: Math.random() * Math.random() * 100,
-  })).reduce((acc, curr) => {
-    acc += curr.price;
-    return acc;
-  }, 0);
+const store = useTableStore(props.id);
 
-  return Math.round(acc / 1000);
-}
+const chunkSize = 20;
+const visibleChunks = ref([]);
+
+onMounted(() => {
+  nextTick(() => {
+    const chunks = visibleChunks.value.map((chunk) => {
+      console.log(chunk.el, "chunk");
+      // return chunk.el.querySelector(".cell");
+    });
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          const index = visibleChunks.value.findIndex(
+            (chunk) => chunk.el === entry.target
+          );
+          visibleChunks.value[index].visible = true;
+        } else {
+          const index = visibleChunks.value.findIndex(
+            (chunk) => chunk.el === entry.target
+          );
+          visibleChunks.value[index].visible = false;
+        }
+      });
+    });
+    // oberserve the chunks
+    chunks.forEach((chunk) => {
+      observer.observe(chunk);
+    });
+  });
+});
+
+onUnmounted(() => { 
+  store.removeStore();
+});
 
 // Dynamically generate grid column count
 const tableGridStyle = computed(() => {
   if (props.selectable) {
     return {
-      gridTemplateColumns: ["40px", ...props.headers.map(() => "1fr")].join(" ")
-    }
+      gridTemplateColumns: ["40px", ...props.headers.map(() => "1fr")].join(
+        " "
+      ),
+    };
   }
   return {
-    gridTemplateColumns: `repeat(${props.headers.length}, 1fr)`
-  }
-})
+    gridTemplateColumns: `repeat(${props.headers.length}, 1fr)`,
+  };
+});
 </script>
   
-  <style scoped>
+<style scoped>
 .table {
   display: grid;
   /* border: 1px solid #ccc; */
@@ -108,6 +144,22 @@ const tableGridStyle = computed(() => {
 :deep(.row:hover .cell) {
   background: var(--surface);
   cursor: pointer;
+}
+
+.chunk-start :deep(.cell) {
+  background-color: var(--primary-800) !important;
+  border-bottom: 2px solid var(--primary-700) !important;
+  color: white !important;
+}
+
+.chunk-start :deep(.visible.cell) {
+  background-color: var(--primary-500) !important;
+}
+
+.chunk-end :deep(.cell) {
+  background-color: var(--primary-800) !important;
+  border-bottom: 2px solid var(--primary-700) !important;
+  color: white !important;
 }
 
 /* Responsive stacking */

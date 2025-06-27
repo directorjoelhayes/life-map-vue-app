@@ -25,6 +25,8 @@ import LmContainer from './components/container/lm-container.vue'
 import Row from './components/container/row.vue'
 import Col from './components/container/col.vue'
 
+import { ripple } from './v-ripple-directive'
+
 
 const router = createRouter({   
   history: createWebHistory(),
@@ -74,6 +76,8 @@ const pinia = createPinia()
 const app = createApp(App)
 
 app.use(VueVirtualScroller)
+
+app.directive('ripple', ripple)
 
 // Register global components
 app.component('LmCard', LmCard)

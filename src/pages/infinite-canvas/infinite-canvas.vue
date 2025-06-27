@@ -174,8 +174,16 @@ onMounted(() => {
       {
         id: ulid(),
         name: "Node 2",
-        x: 100,
-        y: 100,
+        x: 200,
+        y: 0,
+        width: 100,
+        height: 100,
+      },
+      {
+        id: ulid(),
+        name: "Node 3",
+        x: 500,
+        y: 0,
         width: 100,
         height: 100,
       },

@@ -97,6 +97,7 @@ const { event, down, move, up } = buildPointerEvents({
 
 <style scoped>
 .infinite-canvas-block.nodes {
+  position: absolute;
   background-color: var(--surface);
   border-radius: 10px;
   display: flex;

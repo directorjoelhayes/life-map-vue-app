@@ -1,10 +1,24 @@
 
 <template>
   <div :class="getClass" class="row">
-    <div class="checkbox cell">
-        <input type="checkbox">
+    <div
+      class="checkbox cell"
+      :class="{ checked: isSelected }"
+      v-if="selectable"
+    >
+      <UiCheckbox
+        class="checkbox-input"
+        :id="item.id"
+        :model-value="isSelected"
+        @update:model-value="toggleSelect"
+      />
     </div>
-    <div v-for="(header, index) in headers" :key="index" class="cell">
+    <div
+      v-for="(header, index) in headers"
+      :key="index"
+      class="cell"
+      :style="{ flex: columnWidths[index] || '1' }"
+    >
       <slot :item="item" :name="columnName(header)">
         <div>
           {{ getNonSlotValue(item, header) }}
@@ -14,14 +28,21 @@
   </div>
 </template>
   
-  <script setup>
-import { computed } from "vue";
+<script setup>
+import { computed, ref } from "vue";
+import UiCheckbox from "/src/ui/checkbox/checkbox.vue";
+
+const isSelected = ref(false);
 
 // Define props
 const props = defineProps({
   itemClass: {
     type: String,
     default: "",
+  },
+  columnWidths: {
+    type: Array,
+    default: () => [],
   },
   item: {
     type: Object,
@@ -33,7 +54,7 @@ const props = defineProps({
   },
   selectable: {
     type: Boolean,
-    default: true,
+    default: false,
   },
   isSelected: {
     type: Boolean,
@@ -54,31 +75,36 @@ const getClass = computed(() => props.itemClass);
 // Methods
 const columnName = (header) => header.key;
 
-
-
 const getNonSlotValue = (item, header) => {
-  console.log(item, "item", header, "header");
   const val = item[header.key];
   return val || "";
 };
 
 const toggleSelect = (value) => {
+  isSelected.value = value;
   console.log(props.item, "props.item");
   emit("toggle-select", props.item);
 };
 </script>
   
-  <style scoped>
+<style scoped>
 .row {
   display: contents;
 }
 
-.checkbox input {
-    opacity: 0;
+:deep(.checkbox-container) {
+  opacity: 0;
 }
 
-.row:hover .checkbox input {
-    opacity: 1;
+.checkbox.cell {
+  padding: 0.75rem 0.5rem;
+}
+
+.row:hover :deep(.checkbox-container) {
+  opacity: 1;
+}
+.checkbox.cell.checked :deep(.checkbox-container) {
+  opacity: 1;
 }
 </style>
   

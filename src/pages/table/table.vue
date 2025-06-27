@@ -4,7 +4,7 @@
       <div>
         <h1>Table Data</h1>
       </div>
-      <div class="container">
+      <div class="container" v-show="false">
         <div class="bar" id="one"></div>
         <div class="bar" id="two"></div>
         <div class="bar" id="three"></div>
@@ -14,17 +14,19 @@
         <div class="bar" id="seven"></div>
         <div class="bar" id="eight"></div>
       </div>
-      <div>
-        <button @click="randomSort">Random Sort</button>
-      </div>
     </Row>
     <Row :gap="'1.5rem'">
       <Col>
-        <DataTable :headers="headers" :rows="rows">
-          <template #Name="{ item }">
-            <div>{{ item.Name }}</div>
+        <DataTableFlex
+          ref="tableRef"
+          :headers="headers"
+          :rows="rows"
+          :selectable="true"
+        >
+          <template #name="{ item }">
+            <div>{{ item.name }} {{ item.id }}</div>
           </template>
-        </DataTable>
+        </DataTableFlex>
       </Col>
     </Row>
   </LmContainer>
@@ -32,18 +34,26 @@
   
 <script setup>
 import { ref, onMounted } from "vue";
-import DataTable from "./data-table.vue";
+import DataTableFlex from "./data-table-flex.vue";
 import externalData from "./external-data";
 
+const tableRef = ref(null);
+
 const headers = ref([
-  { name: "Name", key: "name" },
+  { 
+    name: "Name", 
+    key: "name",
+    rawSort: (a, b) => {
+      return a.id - b.id;
+    }
+  },
   { name: "Email", key: "email" },
   { name: "Price", key: "price" },
   { name: "Role", key: "role" },
 ]);
 
 const rows = ref(
-  Array.from({ length: 400 }, (_, index) => ({
+  Array.from({ length: 1000 }, (_, index) => ({
     id: index + 1,
     name: `User ${index + 1}`,
     email: `user${index + 1}@example.com`,
@@ -55,39 +65,38 @@ const rows = ref(
 const priceData = externalData(rows.value);
 
 function randomSort() {
-  const sortedRows = [...rows.value].slice(0, 100).sort((a, b) => {
+  const sortedRows = [...rows.value].sort((a, b) => {
     return Math.random() - 0.5;
   });
-  rows.value.slice(0, 30).forEach((row, index) => {
-    rows.value[index] = sortedRows[index];
-  });
+  // Iterate directly over the first 30 indices
 }
 
 onMounted(() => {
-    setInterval(() => {
-      priceData.getUpdates().forEach((row) => {
-        rows.value.find((r) => r.id === row.id).price = row.price;
-      });
-    }, 1000);
+  // setInterval(async () => {
+  //   const updates = [];
+  //   priceData.getUpdates().forEach((row) => {
+  //     updates.push([row.id, { price: row.price }]);
+  //   });
 
-  window.onload = function () {
-    var bars, current, rotation, last;
+  //   tableRef.value.updateRows(updates);
+  // }, 2000);
 
-    bars = document.querySelectorAll(".bar");
-    current = 0;
-    last = 0;
+  var bars, current, rotation, last;
 
-    rotation = setInterval(function () {
-      bars[last].style.opacity = 0.4;
-      bars[current].style.opacity = 1;
-      last = current;
-      if (current === bars.length - 1) {
-        current = 0;
-      } else {
-        current++;
-      }
-    }, 80);
-  };
+  bars = document.querySelectorAll(".bar");
+  current = 0;
+  last = 0;
+
+  rotation = setInterval(function () {
+    bars[last].style.opacity = 0.4;
+    bars[current].style.opacity = 1;
+    last = current;
+    if (current === bars.length - 1) {
+      current = 0;
+    } else {
+      current++;
+    }
+  }, 80);
 });
 </script>
 
